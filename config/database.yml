@@ -15,11 +15,12 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: test
   password: test
-  socket: /var/run/mysqld/mysqld.sock
+  #socket: /var/run/mysqld/mysqld.sock
+  host: 192.168.12.71
 
 development:
   <<: *default
-  database: ids_api_development
+  database: ids
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".

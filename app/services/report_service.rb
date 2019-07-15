@@ -44,7 +44,8 @@ EOF
         		age_at_initiation: r["age_at_initiation"],
         		latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
             latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date,
-            latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility
+            latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
+            current_regimen: (art_regimen r['person_id'])
         		
         	}
         end
@@ -78,7 +79,33 @@ EOF
 
 	end
 
-	
+  def art_regimen(person_id)
+
+    current_regimen_date = MedicationDispensation.find_by_sql("SELECT max(app_date_created) date                                                  FROM medication_dispensations md
+                                                            JOIN medication_prescriptions  mp
+                                                            ON md.medication_prescription_id = mp.medication_prescription_id
+                                                            JOIN medication_prescription_has_medication_regimen mphmr
+                                                            ON mphmr.medication_prescription_encounter_id = mp.encounter_id
+                                                            JOIN encounters e 
+                                                            ON mp.person_id = e.person_id
+                                                            WHERE e.person_id = #{person_id}
+                                                            AND AND e.program_id = 1
+                                                            AND mp.drug_id in (SELECT drug_id from arv_drugs)")
+    return if current_regimen_date.first.blank?
+
+    current_regimen_dispensed = MedicationRegimen.find_by_sql("SELECT mr.regimen regimen FROM medication_regimen mr
+                                                            JOIN medication_prescription_has_medication_regimen mphmr
+                                                            ON mr.medication_regimen_id = mphmr.medication_regimen_id
+                                                            JOIN medication_prescriptions mp
+                                                            JOIN medication_dispensations md 
+                                                            ON mp.medication_prescription_id = md.medication_prescription_id
+                                                            ON mphmr.medication_prescription_encounter_id = mp.encounter_id
+                                                            JOIN encounters en
+                                                            ON mp.encounter_id = en.encounter_id
+                                                            WHERE en.person_id = #{person_id}
+                                                            AND md.app_date_created = #{current_regimen_date.first.date}")
+    return current_regimen_dispensed.first.regimen
+  end	
 end
   
       

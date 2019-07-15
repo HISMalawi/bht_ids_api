@@ -11,16 +11,23 @@ class ReportService
 		hts_client_ids = hts_clients
 		hts_client_ids = [0] if hts_client_ids.blank? 
 
-		data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT *
-		FROM person_has_types pht
-		INNER JOIN  encounters en on pht.person_id = en.person_id		
-		WHERE person_type_id = 1
-		AND en.program_id = 1 AND en.person_id IN (#{hts_clients_ids.join(",")});
+	data = ActiveRecord::Base.connection.select_all <<EOF
+		SELECT distinct e.person_id, (year(now() - year(p.birthdate))) age, p.gender,
+        hsi.date_enrolled 
+		FROM encounters e
+        JOIN people	p
+        ON e.person_id = p.person_id
+        JOIN hiv_staging_infos hsi 
+        ON e.person_id = hsi.person_id
+		WHERE e.program_id = 1 AND e.person_id IN (#{hts_client_ids.join(',')})
+        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
 
-EOF		
-		
+EOF
+
 	end
+
+
+
 
 	def cbs_case_listing
 		case_hash = {}	
@@ -33,7 +40,7 @@ EOF
 		INNER JOIN people p ON pht.person_id = p.person_id
 		INNER JOIN de_identified_identifiers dii ON pht.person_id = dii.person_id
 		WHERE person_type_id = 1
-        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}'
+    AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}'
         ;  
         
 EOF
@@ -75,7 +82,7 @@ EOF
 		return if latest_viral_date.first.trd.blank?
       
 
-		viral_results = LabTestResult.find_by_sql("SELECT ltr. result, ltr.test_result_date, ltr.results_test_facility FROM  lab_test_results ltr 
+		viral_results = LabTestResult.find_by_sql("SELECT ltr.result, ltr.test_result_date, ltr.results_test_facility FROM  lab_test_results ltr 
 			                               JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
 			                               JOIN encounters en ON lo.encounter_id = en.encounter_id
 			                               WHERE en.person_id = #{person_id}
@@ -86,46 +93,62 @@ EOF
 	end
 	
 	def hts_clients
-		data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT pht.person_id
+	  data = ActiveRecord::Base.connection.select_all <<EOF
+        SELECT pht.person_id
 		FROM person_has_types pht		
 		INNER JOIN encounters en ON pht.person_id = en.person_id		
 		AND en.program_id = 18;
-EOF		
-        
-        patient_ids = []
+EOF
+
+patient_ids = []
         data.each do |d|
         	patient_ids << d["person_id"].to_i            
         end
         return patient_ids
+    end
 
   def art_regimen(person_id)
-
-    current_regimen_date = MedicationDispensation.find_by_sql("SELECT max(app_date_created) date                                                  FROM medication_dispensations md
+      current_regimen_date = MedicationDispensation.find_by_sql("SELECT max(md.app_date_created) date                                                  FROM medication_dispensations md
                                                             JOIN medication_prescriptions  mp
                                                             ON md.medication_prescription_id = mp.medication_prescription_id
                                                             JOIN medication_prescription_has_medication_regimen mphmr
                                                             ON mphmr.medication_prescription_encounter_id = mp.encounter_id
                                                             JOIN encounters e 
-                                                            ON mp.person_id = e.person_id
+                                                            ON mp.encounter_id = e.encounter_id
                                                             WHERE e.person_id = #{person_id}
-                                                            AND AND e.program_id = 1
+                                                            AND e.program_id = 1
                                                             AND mp.drug_id in (SELECT drug_id from arv_drugs)")
-    return if current_regimen_date.first.blank?
+    return 'Unknown' if current_regimen_date.first.date.blank?
 
     current_regimen_dispensed = MedicationRegimen.find_by_sql("SELECT mr.regimen regimen FROM medication_regimen mr
                                                             JOIN medication_prescription_has_medication_regimen mphmr
                                                             ON mr.medication_regimen_id = mphmr.medication_regimen_id
                                                             JOIN medication_prescriptions mp
-                                                            JOIN medication_dispensations md 
-                                                            ON mp.medication_prescription_id = md.medication_prescription_id
                                                             ON mphmr.medication_prescription_encounter_id = mp.encounter_id
+                                                            JOIN medication_dispensations md 
+                                                            ON mp.medication_prescription_id = md.medication_prescription_id 
                                                             JOIN encounters en
                                                             ON mp.encounter_id = en.encounter_id
                                                             WHERE en.person_id = #{person_id}
-                                                            AND md.app_date_created = #{current_regimen_date.first.date}")
-    return current_regimen_dispensed.first.regimen
-  end	
+                                                            AND e.program_id = 1
+                                                            AND md.app_date_created = '#{current_regimen_date.first.date}';")
+    
+    return current_regimen_dispensed.first.regimen || "Unknown"
+  end
+
+  def hts_postive
+    data = ActiveRecord::Base.connection.select_all <<~SQL
+    SELECT distinct e.person_id, (year(now() - year(p.birthdate))) age, p.gender,
+        hsi.date_enrolled 
+        FROM encounters e
+        JOIN people p
+        ON e.person_id = p.person_id
+        JOIN hiv_staging_infos hsi 
+        ON e.person_id = hsi.person_id
+        WHERE e.program_id = 18 AND e.person_id IN (select person_id from #{rds_db}.obs where concept_id = 8497)
+        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
+SQL
+  end
 end
   
       

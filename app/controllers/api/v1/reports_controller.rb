@@ -5,9 +5,9 @@ class Api::V1::ReportsController < ApplicationController
     render json: cases
  end
 
- def art_initiation_report
+ def art_initiated
  	initiated_clients = service.cbs_art_initiated
- 	render json:initiated_clients
+ 	render json: initiated_clients
  end
 
  def service

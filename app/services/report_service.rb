@@ -31,6 +31,7 @@ class ReportService
 EOF
      
         data.each do |r|
+          viral_result = viral_load r["person_id"]
         	case_hash[r["person_id"]] = {
         		surveillance:  r["surveillance_id"],
         		gender:        (r["gender"] == "0" ? 'M' : 'F'),
@@ -41,9 +42,9 @@ EOF
         		initiation_date:    r["start_date"],
         		who_stage:     (definition_name r["who_stage"]),
         		age_at_initiation: r["age_at_initiation"],
-        		latest_vl_result: (viral_load r["person_id"]).first.result,
-                latest_vl_date: (viral_load r["person_id"]).first.test_result_date,
-                latest_vl_facility: (viral_load r["person_id"]).first.results_test_facility
+        		latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
+            latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date,
+            latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility
         		
         	}
         end
@@ -64,7 +65,7 @@ EOF
 			                               WHERE en.person_id = #{person_id}
 			                               AND ltr.test_measure = 'Viral Load'")
 
-		return unless latest_viral_date
+		return if latest_viral_date.first.trd.blank?
       
 
 		viral_results = LabTestResult.find_by_sql("SELECT ltr. result, ltr.test_result_date, ltr.results_test_facility FROM  lab_test_results ltr 

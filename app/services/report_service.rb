@@ -10,8 +10,7 @@ class ReportService
 	def cbs_art_initiated
 		hts_client_ids = hts_clients
 		hts_client_ids = [0] if hts_client_ids.blank? 
-
-	data = ActiveRecord::Base.connection.select_all <<EOF
+    data = ActiveRecord::Base.connection.select_all <<EOF
 		SELECT distinct e.person_id, (year(now() - year(p.birthdate))) age, p.gender,
         hsi.date_enrolled 
 		FROM encounters e
@@ -23,6 +22,13 @@ class ReportService
         AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
 
 EOF
+
+    art_vs_hts = []
+
+    art_vs_hts['art_init'] << data.to_json
+    art_vs_hts['hts_postive'] << hts_postive.to_json
+
+    return art_vs_hts
 
 	end
 
@@ -145,7 +151,7 @@ patient_ids = []
         ON e.person_id = p.person_id
         JOIN hiv_staging_infos hsi 
         ON e.person_id = hsi.person_id
-        WHERE e.program_id = 18 AND e.person_id IN (select person_id from #{rds_db}.obs where concept_id = 8497)
+        WHERE e.program_id = 18 AND e.person_id IN (select distinct person_id from #{rds_db}.obs where concept_id = 8497)
         AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
 SQL
   end

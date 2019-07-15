@@ -7,15 +7,23 @@ class ReportService
        @site        = Site.find(site_id)
 	end
 
-# 	def cbs_art_initiated
-# 		data = ActiveRecord::Base.connection.select_all <<EOF
-# 		SELECT * 
-# EOF		
+	def cbs_art_initiated
+		hts_client_ids = hts_clients
+		hts_client_ids = [0] if hts_client_ids.blank? 
+
+		data = ActiveRecord::Base.connection.select_all <<EOF
+		SELECT *
+		FROM person_has_types pht
+		INNER JOIN  encounters en on pht.person_id = en.person_id		
+		WHERE person_type_id = 1
+		AND en.program_id = 1 AND en.person_id IN (#{hts_clients_ids.join(",")});
+
+EOF		
 		
-# 	end
+	end
 
 	def cbs_case_listing
-		case_hash = {}		
+		case_hash = {}	
 
         data = ActiveRecord::Base.connection.select_all <<EOF
 		SELECT DISTINCT dii.identifier surveillance_id, pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
@@ -29,7 +37,6 @@ class ReportService
         ;  
         
 EOF
-     
         data.each do |r|
           viral_result = viral_load r["person_id"]
         	case_hash[r["person_id"]] = {
@@ -46,7 +53,6 @@ EOF
             latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date,
             latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
             current_regimen: (art_regimen r['person_id'])
-        		
         	}
         end
         return case_hash
@@ -78,6 +84,20 @@ EOF
         return viral_results
 
 	end
+	
+	def hts_clients
+		data = ActiveRecord::Base.connection.select_all <<EOF
+		SELECT pht.person_id
+		FROM person_has_types pht		
+		INNER JOIN encounters en ON pht.person_id = en.person_id		
+		AND en.program_id = 18;
+EOF		
+        
+        patient_ids = []
+        data.each do |d|
+        	patient_ids << d["person_id"].to_i            
+        end
+        return patient_ids
 
   def art_regimen(person_id)
 

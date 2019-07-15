@@ -7,11 +7,18 @@ class ReportService
        @site        = Site.find(site_id)
 	end
 
+# 	def cbs_art_initiated
+# 		data = ActiveRecord::Base.connection.select_all <<EOF
+# 		SELECT * 
+# EOF		
+		
+# 	end
+
 	def cbs_case_listing
 		case_hash = {}		
 
         data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT dii.identifier surveillance_id, pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
+		SELECT DISTINCT dii.identifier surveillance_id, pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
 		hsi.hiv_test_date, hsi.hiv_test_facility
 		FROM person_has_types pht
         INNER JOIN hiv_staging_infos hsi ON pht.person_id = hsi.person_id
@@ -33,7 +40,11 @@ EOF
 				hiv_test_facility: r["hiv_test_facility"],
         		initiation_date:    r["start_date"],
         		who_stage:     (definition_name r["who_stage"]),
-        		age_at_initiation: r["age_at_initiation"]
+        		age_at_initiation: r["age_at_initiation"],
+        		latest_vl_result: (viral_load r["person_id"]).first.result,
+                latest_vl_date: (viral_load r["person_id"]).first.test_result_date,
+                latest_vl_facility: (viral_load r["person_id"]).first.results_test_facility
+        		
         	}
         end
         return case_hash
@@ -45,6 +56,28 @@ EOF
 	def definition_name(def_id)
 		 MasterDefinition.find_by(def_id).definition rescue def_id
 	end
+
+	def viral_load(person_id)
+		latest_viral_date = LabTestResult.find_by_sql("SELECT max(test_result_date) AS trd FROM lab_test_results ltr 
+			                               JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
+			                               JOIN encounters en ON lo.encounter_id = en.encounter_id
+			                               WHERE en.person_id = #{person_id}
+			                               AND ltr.test_measure = 'Viral Load'")
+
+		return unless latest_viral_date
+      
+
+		viral_results = LabTestResult.find_by_sql("SELECT ltr. result, ltr.test_result_date, ltr.results_test_facility FROM  lab_test_results ltr 
+			                               JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
+			                               JOIN encounters en ON lo.encounter_id = en.encounter_id
+			                               WHERE en.person_id = #{person_id}
+			                               AND ltr.test_result_date = '#{latest_viral_date.first.trd.strftime("%Y-%m-%d")}'
+			                               AND ltr.test_measure = 'Viral Load'")
+        return viral_results
+
+	end
+
+	
 end
   
       

@@ -6,7 +6,7 @@ class Api::V1::ReportsController < ApplicationController
  end
 
  def art_initiated
- 	initiated_clients = service.cbs_art_initiated
+ 	initiated_clients = service.cbs_art_initiated(rds_db)
  	render json: initiated_clients
  end
 

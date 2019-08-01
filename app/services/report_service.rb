@@ -88,7 +88,7 @@ EOF
 		data.each do |r|
 			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
-					#surveillance:  r["surveillance_id"],
+					surveillance:  r["surveillance_id"],
 					gender:        (r["gender"] == "0" ? 'M' : 'F'),
 					birthdate:     r["birthdate"],
 					date_enrolled: r["date_enrolled"],

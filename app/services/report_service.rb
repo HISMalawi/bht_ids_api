@@ -1,10 +1,11 @@
 class ReportService
 
-	def initialize(start_date:, end_date:, district_id:, site_id:)
+	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil)
 		@start_date  = start_date
 		@end_date    = end_date
 		@district    = Location.find(district_id)
 		@site        = Site.find(site_id)
+		@person_id   = person_id
 	end
 
 	def cbs_art_initiated(rds_db)
@@ -85,7 +86,6 @@ EOF
 
 EOF
 		data.each do |r|
-			raise r.inspect
 			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
 					#surveillance:  r["surveillance_id"],

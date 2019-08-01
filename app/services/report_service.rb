@@ -68,7 +68,7 @@ EOF
 		return case_hash
 	end
 
-	def cbs_person_case(person_id)
+	def cbs_client_case(person_id)
 		case_hash = {}
 
 		data = ActiveRecord::Base.connection.select_all <<EOF

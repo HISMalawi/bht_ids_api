@@ -4,7 +4,7 @@ Rails.application.routes.draw do
   namespace :api do
     namespace :v1 do
       get '/reports/case_listing', to: '/api/v1/reports#cbs_case_listing'
-      get '/reports/client_case_listing', to: 'api/v1/reports#cbs_person_case'
+      get '/reports/client_case_listing', to: '/api/v1/reports#cbs_client_case'
       get '/reports/art_initiated', to: '/api/v1/reports#art_initiated'
     end
   end

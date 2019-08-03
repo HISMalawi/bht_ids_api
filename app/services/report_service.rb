@@ -73,7 +73,7 @@ EOF
 		case_hash = {}
 
 		data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT DISTINCT  pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
+		SELECT DISTINCT  dii.identifier surveillance_id,pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
 		hsi.hiv_test_date, hsi.hiv_test_facility
 		FROM person_has_types pht
         INNER JOIN hiv_staging_infos hsi ON pht.person_id = hsi.person_id

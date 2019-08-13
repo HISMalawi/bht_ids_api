@@ -100,7 +100,9 @@ EOF
 					latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
 					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date,
 					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
-					current_regimen: (art_regimen r['person_id'])
+					current_regimen: (art_regimen r['person_id']),
+					death_date:   (life_status r['person_id']),
+					death_cause:     (cause_of_death r['person_id'])
 			}
 		end
 		return case_hash
@@ -133,6 +135,27 @@ EOF
 			                               AND ltr.test_result_date = '#{latest_viral_date.first.trd.strftime("%Y-%m-%d")}'
 			                               AND ltr.test_measure = 'Viral Load'")
 		return viral_results
+	end
+
+	def life_status(person_id)
+		client_life_status = People.find_by_sql("SELECT death_date FROM people 
+												WHERE person_id = #{person_id}")
+        if client_life_status.blank?
+        	return "On ART"
+        else
+        	return client_life_status.first.death_date
+		end			
+	end
+
+	def cause_of_death(person_id)
+		death_cause = People.find_by_sql("SELECT cause_of_death FROM people
+										  WHERE person_id = #{person_id}")
+
+		if death_cause.blank?
+			return "Reason not known"
+		else 
+			return death_cause.first.cause_of_death
+		end	
 	end
 
 	def hts_clients

@@ -97,12 +97,15 @@ EOF
 					initiation_date:    r["start_date"],
 					who_stage:     (definition_name r["who_stage"]),
 					age_at_initiation: r["age_at_initiation"],
+					first_viral_load_date: (min_viral_load_date r['person_id']),
 					latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
-					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date,
+					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%Y-%m-%d"),
 					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
+					viral_load_follow_up_date: (follow_up_vl_test r['person_id']),
 					current_regimen: (art_regimen r['person_id']),
-					death_date:   (life_status r['person_id']),
-					death_cause:     (cause_of_death r['person_id'])
+					death_date:      (life_status r['person_id']),
+					death_cause:     (cause_of_death r['person_id']),
+					first_cd4_count_date:  (min_cd4_count_date r['person_id'])
 			}
 		end
 		return case_hash
@@ -135,6 +138,47 @@ EOF
 			                               AND ltr.test_result_date = '#{latest_viral_date.first.trd.strftime("%Y-%m-%d")}'
 			                               AND ltr.test_measure = 'Viral Load'")
 		return viral_results
+	end
+
+	def min_viral_load_date(person_id)
+		viral_load_min_date = LabTestResult.find_by_sql("SELECT min(test_result_date) AS trd FROM lab_test_results ltr
+			                               JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
+			                               JOIN encounters en ON lo.encounter_id = en.encounter_id
+			                               WHERE en.person_id = #{person_id}
+			                               AND ltr.test_measure = 'Viral Load'")
+
+		return  viral_load_min_date.first.trd.strftime("%Y-%m-%d")
+		
+	end
+
+	def follow_up_vl_test(person_id)
+		latest_viral_date = LabTestResult.find_by_sql("SELECT max(test_result_date) AS trd FROM lab_test_results ltr
+			                              JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
+			                              JOIN encounters en ON lo.encounter_id = en.encounter_id
+			                              WHERE en.person_id = #{person_id}
+			                              AND ltr.test_measure = 'Viral Load'")
+		    
+		vl_count = LabTestResult.joins(lab_order: :encounter).where(encounters: {person_id: '#{person_id}'}).count
+			
+			if vl_count < 2				
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months
+			else
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 2.years
+			end
+
+		return vl_follow_up_date
+		
+	end
+
+	def min_cd4_count_date(person_id)
+		cd4_count_min_date = LabTestResult.find_by_sql("SELECT min(test_result_date) AS trd FROM lab_test_results ltr
+			                               JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
+			                               JOIN encounters en ON lo.encounter_id = en.encounter_id
+			                               WHERE en.person_id = #{person_id}
+			                               AND ltr.test_measure = 'CD4 Count'")
+
+		return  cd4_count_min_date.first.trd.strftime("%Y-%m-%d")
+		
 	end
 
 	def life_status(person_id)

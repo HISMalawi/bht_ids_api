@@ -1,10 +1,11 @@
 class ReportService
 
-	def initialize(start_date:, end_date:, district_id:, site_id:)
+	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil)
 		@start_date  = start_date
 		@end_date    = end_date
 		@district    = Location.find(district_id)
 		@site        = Site.find(site_id)
+		@person_id   = person_id
 	end
 
 	def cbs_art_initiated(rds_db)
@@ -32,9 +33,6 @@ EOF
 
 	end
 
-
-
-
 	def cbs_case_listing
 		case_hash = {}
 
@@ -46,7 +44,7 @@ EOF
 		INNER JOIN people p ON pht.person_id = p.person_id
 		INNER JOIN de_identified_identifiers dii ON pht.person_id = dii.person_id
 		WHERE person_type_id = 1
-    AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}'
+        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}'
         ;  
 
 EOF
@@ -71,12 +69,57 @@ EOF
 		return case_hash
 	end
 
+	def cbs_client_case(person_id)
+		case_hash = {}
+
+		data = ActiveRecord::Base.connection.select_all <<EOF
+		SELECT DISTINCT  dii.identifier surveillance_id,pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
+		hsi.hiv_test_date, hsi.hiv_test_facility
+		FROM person_has_types pht
+        INNER JOIN hiv_staging_infos hsi ON pht.person_id = hsi.person_id
+		INNER JOIN people p ON pht.person_id = p.person_id
+		INNER JOIN de_identified_identifiers dii ON pht.person_id = dii.person_id
+		WHERE person_type_id = 1
+		AND pht.person_id = #{person_id}
+        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}'
+        ;  
+
+EOF
+		data.each do |r|
+			viral_result = viral_load r["person_id"]
+			case_hash[r["person_id"]] = {
+					surveillance:  r["surveillance_id"],
+					gender:        (r["gender"] == "0" ? 'M' : 'F'),
+					birthdate:     r["birthdate"],
+					date_enrolled: r["date_enrolled"],
+					hiv_test_date: r["hiv_test_date"],
+					hiv_test_facility: r["hiv_test_facility"],
+					initiation_date:    r["start_date"],
+					who_stage:     (definition_name r["who_stage"]),
+					age_at_initiation: r["age_at_initiation"],
+					first_viral_load_date: (min_viral_load_date r['person_id']),
+					latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
+					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%Y-%m-%d"),
+					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
+					viral_load_follow_up_date: (follow_up_vl_test r['person_id']),
+					current_regimen: (art_regimen r['person_id']),
+					death_date:      (life_status r['person_id']),
+					death_cause:     (cause_of_death r['person_id']),
+					first_cd4_count_date:  (min_cd4_count_date r['person_id'])
+			}
+		end
+		return case_hash
+	end
+
+	
 
 	private
 
 	def definition_name(def_id)
 		MasterDefinition.find_by(def_id).definition rescue def_id
 	end
+
+	
 
 	def viral_load(person_id)
 		latest_viral_date = LabTestResult.find_by_sql("SELECT max(test_result_date) AS trd FROM lab_test_results ltr
@@ -95,7 +138,68 @@ EOF
 			                               AND ltr.test_result_date = '#{latest_viral_date.first.trd.strftime("%Y-%m-%d")}'
 			                               AND ltr.test_measure = 'Viral Load'")
 		return viral_results
+	end
 
+	def min_viral_load_date(person_id)
+		viral_load_min_date = LabTestResult.find_by_sql("SELECT min(test_result_date) AS trd FROM lab_test_results ltr
+			                               JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
+			                               JOIN encounters en ON lo.encounter_id = en.encounter_id
+			                               WHERE en.person_id = #{person_id}
+			                               AND ltr.test_measure = 'Viral Load'")
+
+		return  viral_load_min_date.first.trd.strftime("%Y-%m-%d")
+		
+	end
+
+	def follow_up_vl_test(person_id)
+		latest_viral_date = LabTestResult.find_by_sql("SELECT max(test_result_date) AS trd FROM lab_test_results ltr
+			                              JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
+			                              JOIN encounters en ON lo.encounter_id = en.encounter_id
+			                              WHERE en.person_id = #{person_id}
+			                              AND ltr.test_measure = 'Viral Load'")
+		    
+		vl_count = LabTestResult.joins(lab_order: :encounter).where(encounters: {person_id: '#{person_id}'}).count
+			
+			if vl_count < 2				
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months
+			else
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 2.years
+			end
+
+		return vl_follow_up_date
+		
+	end
+
+	def min_cd4_count_date(person_id)
+		cd4_count_min_date = LabTestResult.find_by_sql("SELECT min(test_result_date) AS trd FROM lab_test_results ltr
+			                               JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
+			                               JOIN encounters en ON lo.encounter_id = en.encounter_id
+			                               WHERE en.person_id = #{person_id}
+			                               AND ltr.test_measure = 'CD4 Count'")
+
+		return  cd4_count_min_date.first.trd.strftime("%Y-%m-%d")
+		
+	end
+
+	def life_status(person_id)
+		client_life_status = People.find_by_sql("SELECT death_date FROM people 
+												WHERE person_id = #{person_id}")
+        if client_life_status.blank?
+        	return "On ART"
+        else
+        	return client_life_status.first.death_date
+		end			
+	end
+
+	def cause_of_death(person_id)
+		death_cause = People.find_by_sql("SELECT cause_of_death FROM people
+										  WHERE person_id = #{person_id}")
+
+		if death_cause.blank?
+			return "Reason not known"
+		else 
+			return death_cause.first.cause_of_death
+		end	
 	end
 
 	def hts_clients

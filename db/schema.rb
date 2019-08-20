@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_07_10_093831) do
+ActiveRecord::Schema.define(version: 2019_06_29_181240) do
 
   create_table "appointments", primary_key: "appointment_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "encounter_id", null: false
@@ -134,8 +134,8 @@ ActiveRecord::Schema.define(version: 2019_07_10_093831) do
     t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["encounter_type_id"], name: "fk_rails_cf33a2decd"
     t.index ["person_id"], name: "fk_rails_8f2e31923b"
     t.index ["program_id"], name: "fk_rails_a13406b5c0"
@@ -391,8 +391,8 @@ ActiveRecord::Schema.define(version: 2019_07_10_093831) do
     t.integer "void_reason"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
   end
 
   create_table "person_addresses", primary_key: "person_address_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
@@ -412,8 +412,8 @@ ActiveRecord::Schema.define(version: 2019_07_10_093831) do
     t.string "void_reason"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["country_id"], name: "fk_rails_525c1ee58a"
     t.index ["current_district_id"], name: "fk_rails_60b44a0ad8"
     t.index ["current_traditional_authority_id"], name: "fk_rails_f3cd017b99"
@@ -424,12 +424,11 @@ ActiveRecord::Schema.define(version: 2019_07_10_093831) do
     t.index ["person_id"], name: "fk_rails_eb9d05724a"
   end
 
-  create_table "person_has_types", primary_key: "person_has_type_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
-    t.bigint "person_id"
-    t.bigint "person_type_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["person_id"], name: "fk_rails_282ec6b71b"
+  create_table "person_has_types", primary_key: ["person_id", "person_type_id"], options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.bigint "person_id", null: false
+    t.bigint "person_type_id", null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["person_type_id"], name: "fk_rails_7858ca9698"
   end
 
@@ -442,11 +441,11 @@ ActiveRecord::Schema.define(version: 2019_07_10_093831) do
     t.bigint "creator", null: false
     t.boolean "voided", default: false, null: false
     t.bigint "voided_by"
-    t.integer "void_reason"
+    t.string "void_reason"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
     t.index ["person_id"], name: "fk_rails_546377d8eb"
   end
 
@@ -616,12 +615,20 @@ ActiveRecord::Schema.define(version: 2019_07_10_093831) do
     t.index ["encounter_id"], name: "fk_rails_e6659727a6"
   end
 
-  create_table "users", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
-    t.string "name"
-    t.string "email"
+  create_table "users", primary_key: "user_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.bigint "person_id", null: false
+    t.string "username", null: false
     t.string "password_digest"
+    t.integer "user_role", null: false
+    t.boolean "voided", default: false, null: false
+    t.bigint "voided_by"
+    t.datetime "voided_date"
+    t.string "void_reason"
+    t.datetime "app_date_created", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "app_date_updated"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["person_id"], name: "fk_rails_fa67535741"
   end
 
   create_table "vitals", primary_key: "vitals_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
@@ -705,6 +712,7 @@ ActiveRecord::Schema.define(version: 2019_07_10_093831) do
   add_foreign_key "symptoms", "encounters", primary_key: "encounter_id"
   add_foreign_key "symptoms", "master_definitions", column: "concept_id", primary_key: "master_definition_id"
   add_foreign_key "tb_statuses", "encounters", primary_key: "encounter_id"
+  add_foreign_key "users", "people", primary_key: "person_id"
   add_foreign_key "vitals", "encounters", primary_key: "encounter_id"
   add_foreign_key "vitals", "master_definitions", column: "concept_id", primary_key: "master_definition_id"
 end

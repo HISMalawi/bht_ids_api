@@ -1,4 +1,4 @@
 class LabTestResult < ApplicationRecord
-	has_many :lab_orders
+	belongs_to :lab_order
 	has_many :master_definition
 end

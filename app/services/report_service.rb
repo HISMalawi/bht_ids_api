@@ -1,11 +1,12 @@
 class ReportService
 
-	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil)
+	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil, score: 100)
 		@start_date  = start_date
 		@end_date    = end_date
 		@district    = Location.find(district_id)
 		@site        = Site.find(site_id)
 		@person_id   = person_id
+		@score       = score
 	end
 
 	def cbs_art_initiated(rds_db)
@@ -102,7 +103,9 @@ EOF
 					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%Y-%m-%d"),
 					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
 					viral_load_follow_up_date: (follow_up_vl_test r['person_id']),
+					Vl_supressed_result:  (supressed_viral_load_history r['person_id']),
 					current_regimen: (art_regimen r['person_id']),
+					facility_tracking: (facility_movement r['person_id'],@score),
 					death_date:      (life_status r['person_id']),
 					death_cause:     (cause_of_death r['person_id']),
 					first_cd4_count_date:  (min_cd4_count_date r['person_id'])
@@ -110,16 +113,13 @@ EOF
 		end
 		return case_hash
 	end
-
 	
 
 	private
 
 	def definition_name(def_id)
 		MasterDefinition.find_by(def_id).definition rescue def_id
-	end
-
-	
+	end	
 
 	def viral_load(person_id)
 		latest_viral_date = LabTestResult.find_by_sql("SELECT max(test_result_date) AS trd FROM lab_test_results ltr
@@ -151,6 +151,12 @@ EOF
 		
 	end
 
+	def supressed_viral_load_history(person_id)
+		supressed_vl = LabTestResult.joins(lab_order: :encounter).where(test_measure: 'Viral Load',encounters: {person_id: person_id})
+		               .select('result').minimum(:result)
+		return supressed_vl
+	end
+
 	def follow_up_vl_test(person_id)
 		latest_viral_date = LabTestResult.find_by_sql("SELECT max(test_result_date) AS trd FROM lab_test_results ltr
 			                              JOIN lab_orders lo ON ltr.lab_order_id = lo.lab_order_id
@@ -158,7 +164,7 @@ EOF
 			                              WHERE en.person_id = #{person_id}
 			                              AND ltr.test_measure = 'Viral Load'")
 		    
-		vl_count = LabTestResult.joins(lab_order: :encounter).where(encounters: {person_id: '#{person_id}'}).count
+		vl_count = LabTestResult.joins(lab_order: :encounter).where(encounters: {person_id: person_id}).count
 			
 			if vl_count < 2				
 				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months
@@ -179,6 +185,28 @@ EOF
 
 		return  cd4_count_min_date.first.trd.strftime("%Y-%m-%d")
 		
+	end
+
+	def facility_movement(person_id,score)		
+		#select all the potential duplicates that are matching 100%
+		potential_dup_a = PotentialDuplicate.find_by(person_id_a: person_id, score: score) 
+		potential_dup_b =  PotentialDuplicate.find_by(person_id_b: person_id, score: score)
+
+		potential_duplicate = []
+
+		(potential_dup_a || []).each{|a| potential_duplicate << a["person_id_b"]}
+		(potential_dup_b || []).each{|b| potential_duplicate << b["person_id_a"]}
+		potential_duplicate << person_id
+
+		encounters = Encounter.find_by_sql("SELECT md.definition program, DATE_FORMAT(max(visit_date),'%Y-%m-%d') latest_visit_date, s.site_name  
+                                           from encounters en
+                                           join master_definitions md 
+                                           on en.program_id = md.master_definition_id
+                                           join sites s on mid(encounter_id, -5) = s.site_id
+                                           where person_id in (4220100168)
+                                           group by program_id,mid(encounter_id, -5) order by visit_date ")
+		return encounters	
+
 	end
 
 	def life_status(person_id)

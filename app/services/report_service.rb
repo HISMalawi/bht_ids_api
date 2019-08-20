@@ -151,7 +151,7 @@ EOF
         ON e.person_id = p.person_id
         JOIN hiv_staging_infos hsi 
         ON e.person_id = hsi.person_id
-        WHERE e.program_id = 18 AND e.person_id IN (select distinct person_id from #{rds_db}.obs where concept_id = 8497)
+        WHERE e.program_id = 18 AND e.person_id IN (select distinct person_id from #{rds_db}.obs where value_coded = 8497)
         AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
 		SQL
 

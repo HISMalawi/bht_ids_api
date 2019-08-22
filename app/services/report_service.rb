@@ -165,12 +165,16 @@ EOF
 			                              AND ltr.test_measure = 'Viral Load'")
 		    
 		vl_count = LabTestResult.joins(lab_order: :encounter).where(encounters: {person_id: person_id}).count
-			
+		
+		if !latest_viral_date.first.trd.blank?	
+			debugger
 			if vl_count < 2				
-				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months
+				
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months 
 			else
-				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 2.years
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 2.years 
 			end
+		end
 
 		return vl_follow_up_date
 		
@@ -183,7 +187,9 @@ EOF
 			                               WHERE en.person_id = #{person_id}
 			                               AND ltr.test_measure = 'CD4 Count'")
 
-		return  cd4_count_min_date.first.trd.strftime("%Y-%m-%d")
+ 		cd4_count_min_date = cd4_count_min_date.first.trd.strftime("%Y-%m-%d") unless  cd4_count_min_date.first.trd.blank?
+      
+		return  cd4_count_min_date
 		
 	end
 

@@ -3,8 +3,8 @@ class ReportService
 	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil, score: 100)
 		@start_date  = start_date
 		@end_date    = end_date
-		@district    = Location.find(district_id)
-		@site        = Site.find(site_id)
+		@district    = district_id
+		@site        = site_id
 		@person_id   = person_id
 		@score       = score
 	end

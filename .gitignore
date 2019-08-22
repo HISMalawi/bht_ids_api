@@ -29,3 +29,9 @@
 
 # Ignore database config file
 /config/database.yml
+
+# Ignore passenger lock files
+*.pid.lock
+*.pid
+
+

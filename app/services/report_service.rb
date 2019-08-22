@@ -147,7 +147,7 @@ EOF
 			                               WHERE en.person_id = #{person_id}
 			                               AND ltr.test_measure = 'Viral Load'")
 
-		return  viral_load_min_date.first.trd.strftime("%Y-%m-%d")
+		return  viral_load_min_date.first.trd.strftime("%Y-%m-%d") rescue nil
 		
 	end
 
@@ -198,7 +198,7 @@ EOF
 		(potential_dup_b || []).each{|b| potential_duplicate << b["person_id_a"]}
 		potential_duplicate << person_id
 
-		encounters = Encounter.find_by_sql("SELECT md.definition program, DATE_FORMAT(max(visit_date),'%Y-%m-%d') latest_visit_date, s.site_name  
+		encounters = Encounter.find_by_sql("SELECT md.definition program, max(visit_date) latest_visit_date, s.site_name  
                                            from encounters en
                                            join master_definitions md 
                                            on en.program_id = md.master_definition_id

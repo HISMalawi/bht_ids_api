@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_06_29_181240) do
+ActiveRecord::Schema.define(version: 2019_08_17_093939) do
 
   create_table "appointments", primary_key: "appointment_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "encounter_id", null: false
@@ -134,11 +134,26 @@ ActiveRecord::Schema.define(version: 2019_06_29_181240) do
     t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
-    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["encounter_type_id"], name: "fk_rails_cf33a2decd"
     t.index ["person_id"], name: "fk_rails_8f2e31923b"
     t.index ["program_id"], name: "fk_rails_a13406b5c0"
+  end
+
+  create_table "failed_record_types", primary_key: "failed_record_type_id", id: :integer, default: nil, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.text "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  create_table "failed_records", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.integer "failed_record_type_id", null: false
+    t.bigint "record_id", null: false
+    t.text "errr_message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["failed_record_type_id"], name: "fk_rails_38cb80a616"
   end
 
   create_table "family_plannings", primary_key: "family_planning_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
@@ -231,6 +246,7 @@ ActiveRecord::Schema.define(version: 2019_06_29_181240) do
 
   create_table "locations", primary_key: "location_id", id: :integer, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name", null: false
+    t.string "code", null: false
     t.integer "parent_location"
     t.string "description"
     t.string "latitude"
@@ -391,8 +407,8 @@ ActiveRecord::Schema.define(version: 2019_06_29_181240) do
     t.integer "void_reason"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
-    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "person_addresses", primary_key: "person_address_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
@@ -412,8 +428,8 @@ ActiveRecord::Schema.define(version: 2019_06_29_181240) do
     t.string "void_reason"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
-    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["country_id"], name: "fk_rails_525c1ee58a"
     t.index ["current_district_id"], name: "fk_rails_60b44a0ad8"
     t.index ["current_traditional_authority_id"], name: "fk_rails_f3cd017b99"
@@ -424,11 +440,12 @@ ActiveRecord::Schema.define(version: 2019_06_29_181240) do
     t.index ["person_id"], name: "fk_rails_eb9d05724a"
   end
 
-  create_table "person_has_types", primary_key: ["person_id", "person_type_id"], options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
-    t.bigint "person_id", null: false
-    t.bigint "person_type_id", null: false
-    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+  create_table "person_has_types", primary_key: "person_has_type_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.bigint "person_id"
+    t.bigint "person_type_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["person_id"], name: "fk_rails_282ec6b71b"
     t.index ["person_type_id"], name: "fk_rails_7858ca9698"
   end
 
@@ -441,11 +458,11 @@ ActiveRecord::Schema.define(version: 2019_06_29_181240) do
     t.bigint "creator", null: false
     t.boolean "voided", default: false, null: false
     t.bigint "voided_by"
-    t.string "void_reason"
+    t.integer "void_reason"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
-    t.datetime "created_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
-    t.datetime "updated_at", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["person_id"], name: "fk_rails_546377d8eb"
   end
 
@@ -618,13 +635,13 @@ ActiveRecord::Schema.define(version: 2019_06_29_181240) do
   create_table "users", primary_key: "user_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "person_id", null: false
     t.string "username", null: false
-    t.string "password_digest"
+    t.string "password", null: false
     t.integer "user_role", null: false
     t.boolean "voided", default: false, null: false
     t.bigint "voided_by"
     t.datetime "voided_date"
     t.string "void_reason"
-    t.datetime "app_date_created", default: -> { "CURRENT_TIMESTAMP" }, null: false
+    t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -664,6 +681,7 @@ ActiveRecord::Schema.define(version: 2019_06_29_181240) do
   add_foreign_key "encounters", "master_definitions", column: "encounter_type_id", primary_key: "master_definition_id"
   add_foreign_key "encounters", "master_definitions", column: "program_id", primary_key: "master_definition_id"
   add_foreign_key "encounters", "people", primary_key: "person_id"
+  add_foreign_key "failed_records", "failed_record_types", primary_key: "failed_record_type_id"
   add_foreign_key "family_plannings", "encounters", primary_key: "encounter_id"
   add_foreign_key "guardians", "master_definitions", column: "relationship_type_id", primary_key: "master_definition_id"
   add_foreign_key "guardians", "people", primary_key: "person_id"

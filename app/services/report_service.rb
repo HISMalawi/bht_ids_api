@@ -53,7 +53,7 @@ EOF
 			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
-					gender:        (r["gender"] == "0" ? 'M' : 'F'),
+					gender:        (r["gender"] == 0 ? 'M' : 'F'),
 					birthdate:     r["birthdate"],
 					date_enrolled: r["date_enrolled"],
 					hiv_test_date: r["hiv_test_date"],
@@ -274,7 +274,7 @@ EOF
                                                             JOIN encounters en
                                                             ON mp.encounter_id = en.encounter_id
                                                             WHERE en.person_id = #{person_id}
-                                                            AND e.program_id = 1
+                                                            AND en.program_id = 1
                                                             AND md.app_date_created = '#{current_regimen_date.first.date}';")
 
 		return current_regimen_dispensed.first.regimen || "Unknown"

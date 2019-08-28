@@ -53,7 +53,7 @@ EOF
 			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
-					gender:        (r["gender"] == "0" ? 'M' : 'F'),
+					gender:        (r["gender"] == 0 ? 'M' : 'F'),
 					birthdate:     r["birthdate"],
 					date_enrolled: r["date_enrolled"],
 					hiv_test_date: r["hiv_test_date"],
@@ -165,12 +165,15 @@ EOF
 			                              AND ltr.test_measure = 'Viral Load'")
 		    
 		vl_count = LabTestResult.joins(lab_order: :encounter).where(encounters: {person_id: person_id}).count
-			
-			if vl_count < 2				
-				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months
+		
+		if !latest_viral_date.first.trd.blank?	
+			if vl_count < 2
+				
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months 
 			else
-				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 2.years
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 2.years 
 			end
+		end
 
 		return vl_follow_up_date
 		
@@ -183,7 +186,9 @@ EOF
 			                               WHERE en.person_id = #{person_id}
 			                               AND ltr.test_measure = 'CD4 Count'")
 
-		return  cd4_count_min_date.first.trd.strftime("%Y-%m-%d")
+ 		cd4_count_min_date = cd4_count_min_date.first.trd.strftime("%Y-%m-%d") unless  cd4_count_min_date.first.trd.blank?
+      
+		return  cd4_count_min_date
 		
 	end
 
@@ -268,7 +273,7 @@ EOF
                                                             JOIN encounters en
                                                             ON mp.encounter_id = en.encounter_id
                                                             WHERE en.person_id = #{person_id}
-                                                            AND e.program_id = 1
+                                                            AND en.program_id = 1
                                                             AND md.app_date_created = '#{current_regimen_date.first.date}';")
 
 		return current_regimen_dispensed.first.regimen || "Unknown"

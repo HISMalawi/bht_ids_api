@@ -167,8 +167,7 @@ EOF
 		vl_count = LabTestResult.joins(lab_order: :encounter).where(encounters: {person_id: person_id}).count
 		
 		if !latest_viral_date.first.trd.blank?	
-			debugger
-			if vl_count < 2				
+			if vl_count < 2
 				
 				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months 
 			else

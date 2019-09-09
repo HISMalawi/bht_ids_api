@@ -2,7 +2,7 @@ class Api::V1::ReportsController < ApplicationController
 
  def cbs_case_listing
     cases = service.cbs_case_listing
-    headers['pagination'] = cases[1]
+    headers['X-Pagination'] = cases[1]
     render json: cases[0]
  end
 

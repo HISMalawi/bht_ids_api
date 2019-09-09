@@ -44,7 +44,7 @@ EOF
 			age_at_initiation, hiv_test_date, hiv_test_facility').where("person_type_id = 1 AND date_enrolled 
 			BETWEEN '#{@start_date}' AND '#{@end_date}'").paginate(page: @page, per_page: @per_page)
 
-		case_hash['pagination'] = {
+		headers = {
 				current_page: 	data.current_page,
 				per_page:     	data.per_page,
 				total_entries:  data.total_entries
@@ -69,7 +69,7 @@ EOF
 			}
 		end
 
-		return case_hash
+		return case_hash, headers
 	end
 
 	def cbs_client_case(person_id)

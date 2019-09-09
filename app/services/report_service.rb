@@ -1,12 +1,14 @@
 class ReportService
 
-	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil, score: 100)
+	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil, score: 100, page: 1, per_page: 25)
 		@start_date  = start_date
 		@end_date    = end_date
 		@district    = district_id
 		@site        = site_id
 		@person_id   = person_id
 		@score       = score
+		@page 		 = page
+		@per_page    = per_page
 	end
 
 	def cbs_art_initiated(rds_db)
@@ -37,18 +39,17 @@ EOF
 	def cbs_case_listing
 		case_hash = {}
 
-		data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT DISTINCT dii.identifier surveillance_id, pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
-		hsi.hiv_test_date, hsi.hiv_test_facility
-		FROM person_has_types pht
-        INNER JOIN hiv_staging_infos hsi ON pht.person_id = hsi.person_id
-		INNER JOIN people p ON pht.person_id = p.person_id
-		INNER JOIN de_identified_identifiers dii ON pht.person_id = dii.person_id
-		WHERE person_type_id = 1
-        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}'
-        ;  
+		data = PersonHasTypes.joins(:hiv_staging_info, :people, :de_identified_identifier).select('identifier 
+			surveillance_id, person_has_types.person_id,gender, birthdate,date_enrolled,start_date,who_stage, 
+			age_at_initiation, hiv_test_date, hiv_test_facility').where("person_type_id = 1 AND date_enrolled 
+			BETWEEN '#{@start_date}' AND '#{@end_date}'").paginate(page: @page, per_page: @per_page)
 
-EOF
+		case_hash['pagination'] = {
+				current_page: 	data.current_page,
+				per_page:     	data.per_page,
+				total_entries:  data.total_entries
+		}
+
 		data.each do |r|
 			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
@@ -67,6 +68,7 @@ EOF
 					current_regimen: (art_regimen r['person_id'])
 			}
 		end
+
 		return case_hash
 	end
 

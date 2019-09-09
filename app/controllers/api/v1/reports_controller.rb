@@ -18,10 +18,10 @@ class Api::V1::ReportsController < ApplicationController
  def service
  	if params[:person_id] == nil
       ReportService.new(start_date: params[:start_date].to_date, 
-        end_date: params[:end_date].to_date, district_id: 1, site_id: 1)
+        end_date: params[:end_date].to_date, district_id: params[:district_id], site_id: params[:site_id])
     else
       ReportService.new(start_date: params[:start_date].to_date, 
-        end_date: params[:end_date].to_date, district_id: 1, site_id: 1, person_id: params[:person_id])
+        end_date: params[:end_date].to_date, district_id: params[:district_id], site_id: params[:site_id], person_id: params[:person_id],score: params[score])
     end
 
  end

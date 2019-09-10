@@ -632,20 +632,12 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.index ["encounter_id"], name: "fk_rails_e6659727a6"
   end
 
-  create_table "users", primary_key: "user_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
-    t.bigint "person_id", null: false
-    t.string "username", null: false
-    t.string "password", null: false
-    t.integer "user_role", null: false
-    t.boolean "voided", default: false, null: false
-    t.bigint "voided_by"
-    t.datetime "voided_date"
-    t.string "void_reason"
-    t.datetime "app_date_created", null: false
-    t.datetime "app_date_updated"
+  create_table "users", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.string "name"
+    t.string "username"
+    t.string "password_digest"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["person_id"], name: "fk_rails_fa67535741"
   end
 
   create_table "vitals", primary_key: "vitals_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
@@ -730,7 +722,6 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
   add_foreign_key "symptoms", "encounters", primary_key: "encounter_id"
   add_foreign_key "symptoms", "master_definitions", column: "concept_id", primary_key: "master_definition_id"
   add_foreign_key "tb_statuses", "encounters", primary_key: "encounter_id"
-  add_foreign_key "users", "people", primary_key: "person_id"
   add_foreign_key "vitals", "encounters", primary_key: "encounter_id"
   add_foreign_key "vitals", "master_definitions", column: "concept_id", primary_key: "master_definition_id"
 end

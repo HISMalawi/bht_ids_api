@@ -246,6 +246,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
 
   create_table "locations", primary_key: "location_id", id: :integer, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name", null: false
+    t.string "code", null: false
     t.integer "parent_location"
     t.string "description"
     t.string "latitude"

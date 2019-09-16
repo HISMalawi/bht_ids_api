@@ -1,12 +1,14 @@
 class ReportService
 
-	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil, score: 100)
+	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil, score: 100, page: 1, per_page: 25)
 		@start_date  = start_date
 		@end_date    = end_date
 		@district    = district_id
 		@site        = site_id
 		@person_id   = person_id
 		@score       = score
+		@page 		 = page
+		@per_page    = per_page
 	end
 
 	def cbs_art_initiated(rds_db)
@@ -37,23 +39,22 @@ EOF
 	def cbs_case_listing
 		case_hash = {}
 
-		data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT DISTINCT dii.identifier surveillance_id, pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
-		hsi.hiv_test_date, hsi.hiv_test_facility
-		FROM person_has_types pht
-        INNER JOIN hiv_staging_infos hsi ON pht.person_id = hsi.person_id
-		INNER JOIN people p ON pht.person_id = p.person_id
-		INNER JOIN de_identified_identifiers dii ON pht.person_id = dii.person_id
-		WHERE person_type_id = 1
-        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}'
-        ;  
+		data = PersonHasTypes.joins(:hiv_staging_info, :people, :de_identified_identifier).select('identifier 
+			surveillance_id, person_has_types.person_id,gender, birthdate,date_enrolled,start_date,who_stage, 
+			age_at_initiation, hiv_test_date, hiv_test_facility').where("person_type_id = 1 AND date_enrolled 
+			BETWEEN '#{@start_date}' AND '#{@end_date}'").paginate(page: @page, per_page: @per_page)
 
-EOF
+		headers = {
+				current_page: 	data.current_page,
+				per_page:     	data.per_page,
+				total_entries:  data.total_entries
+		}
+
 		data.each do |r|
 			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
-					gender:        (r["gender"] == "0" ? 'M' : 'F'),
+					gender:        (r["gender"] == 0 ? 'M' : 'F'),
 					birthdate:     r["birthdate"],
 					date_enrolled: r["date_enrolled"],
 					hiv_test_date: r["hiv_test_date"],
@@ -67,7 +68,8 @@ EOF
 					current_regimen: (art_regimen r['person_id'])
 			}
 		end
-		return case_hash
+
+		return case_hash, headers
 	end
 
 	def cbs_client_case(person_id)
@@ -165,12 +167,15 @@ EOF
 			                              AND ltr.test_measure = 'Viral Load'")
 		    
 		vl_count = LabTestResult.joins(lab_order: :encounter).where(encounters: {person_id: person_id}).count
-			
-			if vl_count < 2				
-				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months
+		
+		if !latest_viral_date.first.trd.blank?	
+			if vl_count < 2
+				
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 6.months 
 			else
-				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 2.years
+				vl_follow_up_date = latest_viral_date.first.trd.strftime("%Y-%m-%d").to_date + 2.years 
 			end
+		end
 
 		return vl_follow_up_date
 		
@@ -183,7 +188,9 @@ EOF
 			                               WHERE en.person_id = #{person_id}
 			                               AND ltr.test_measure = 'CD4 Count'")
 
-		return  cd4_count_min_date.first.trd.strftime("%Y-%m-%d")
+ 		cd4_count_min_date = cd4_count_min_date.first.trd.strftime("%Y-%m-%d") unless  cd4_count_min_date.first.trd.blank?
+      
+		return  cd4_count_min_date
 		
 	end
 
@@ -268,7 +275,7 @@ EOF
                                                             JOIN encounters en
                                                             ON mp.encounter_id = en.encounter_id
                                                             WHERE en.person_id = #{person_id}
-                                                            AND e.program_id = 1
+                                                            AND en.program_id = 1
                                                             AND md.app_date_created = '#{current_regimen_date.first.date}';")
 
 		return current_regimen_dispensed.first.regimen || "Unknown"
@@ -283,7 +290,7 @@ EOF
         ON e.person_id = p.person_id
         JOIN hiv_staging_infos hsi 
         ON e.person_id = hsi.person_id
-        WHERE e.program_id = 18 AND e.person_id IN (select distinct person_id from #{rds_db}.obs where concept_id = 8497)
+        WHERE e.program_id = 18 AND e.person_id IN (select distinct person_id from #{rds_db}.obs where value_coded = 8497)
         AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
 		SQL
 

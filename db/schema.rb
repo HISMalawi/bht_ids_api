@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2019_08_17_093939) do
+ActiveRecord::Schema.define(version: 2019_09_12_084239) do
 
   create_table "appointments", primary_key: "appointment_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "encounter_id", null: false
@@ -41,6 +41,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.bigint "voided_by"
     t.datetime "voided_date"
     t.string "void_reason"
+    t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
@@ -154,6 +155,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["failed_record_type_id"], name: "fk_rails_38cb80a616"
+    t.index ["record_id"], name: "index_failed_records_on_record_id"
   end
 
   create_table "family_plannings", primary_key: "family_planning_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
@@ -164,6 +166,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.bigint "voided_by"
     t.datetime "voided_date"
     t.string "void_reason"
+    t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
@@ -324,6 +327,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.bigint "voided_by"
     t.datetime "voided_date"
     t.string "void_reason"
+    t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
@@ -345,7 +349,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
 
   create_table "occupations", primary_key: "occupation_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "person_id", null: false
-    t.bigint "occupation", null: false
+    t.string "occupation", null: false
     t.bigint "creator"
     t.boolean "voided", default: false, null: false
     t.integer "voided_by"
@@ -355,7 +359,6 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["occupation"], name: "fk_rails_3dc8df391a"
     t.index ["person_id"], name: "fk_rails_c323a82e8d"
   end
 
@@ -385,6 +388,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.bigint "voided_by"
     t.datetime "voided_date"
     t.string "void_reason"
+    t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
@@ -500,6 +504,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.bigint "voided_by"
     t.datetime "voided_date"
     t.string "void_reason"
+    t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
@@ -516,6 +521,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.bigint "voided_by"
     t.datetime "voided_date"
     t.string "void_reason"
+    t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
@@ -555,6 +561,12 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.index ["relationship_type_id"], name: "fk_rails_d6679af8df"
   end
 
+  create_table "roles", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.string "name"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
   create_table "side_effects", primary_key: "side_effect_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "encounter_id"
     t.bigint "concept_id"
@@ -563,6 +575,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.bigint "voided_by"
     t.datetime "voided_date"
     t.string "void_reason"
+    t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
@@ -572,10 +585,12 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
   end
 
   create_table "side_effects_has_medication_prescriptions", primary_key: "side_effects_has_medication_prescription_id", id: :integer, default: nil, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
-    t.integer "side_effect_id", null: false
+    t.bigint "side_effect_id", null: false
     t.bigint "medication_prescription_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["medication_prescription_id"], name: "fk_rails_5734c61ec9"
+    t.index ["side_effect_id"], name: "fk_rails_5c0c6cd6a9"
   end
 
   create_table "site_types", primary_key: "site_type_id", id: :integer, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
@@ -625,6 +640,7 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.bigint "voided_by"
     t.datetime "voided_date"
     t.string "void_reason"
+    t.bigint "creator"
     t.datetime "app_date_created", null: false
     t.datetime "app_date_updated"
     t.datetime "created_at", null: false
@@ -632,10 +648,16 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
     t.index ["encounter_id"], name: "fk_rails_e6659727a6"
   end
 
-  create_table "users", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
-    t.string "name"
-    t.string "username"
-    t.string "password_digest"
+  create_table "users", primary_key: "user_id", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.string "username", null: false
+    t.string "password_digest", null: false
+    t.integer "user_role", null: false
+    t.boolean "voided", default: false, null: false
+    t.bigint "voided_by"
+    t.datetime "voided_date"
+    t.string "void_reason"
+    t.datetime "app_date_created", null: false
+    t.datetime "app_date_updated"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
@@ -687,7 +709,6 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
   add_foreign_key "medication_prescription_has_medication_regimen", "medication_regimen", column: "medication_regimen_id", primary_key: "medication_regimen_id"
   add_foreign_key "medication_prescriptions", "encounters", primary_key: "encounter_id"
   add_foreign_key "medication_prescriptions", "master_definitions", column: "drug_id", primary_key: "master_definition_id"
-  add_foreign_key "occupations", "master_definitions", column: "occupation", primary_key: "master_definition_id"
   add_foreign_key "occupations", "people", primary_key: "person_id"
   add_foreign_key "outcomes", "master_definitions", column: "concept_id", primary_key: "master_definition_id"
   add_foreign_key "outcomes", "people", primary_key: "person_id"
@@ -718,6 +739,8 @@ ActiveRecord::Schema.define(version: 2019_08_17_093939) do
   add_foreign_key "relationships", "people", column: "person_id_b", primary_key: "person_id"
   add_foreign_key "side_effects", "encounters", primary_key: "encounter_id"
   add_foreign_key "side_effects", "master_definitions", column: "concept_id", primary_key: "master_definition_id"
+  add_foreign_key "side_effects_has_medication_prescriptions", "medication_prescriptions", primary_key: "medication_prescription_id"
+  add_foreign_key "side_effects_has_medication_prescriptions", "side_effects", primary_key: "side_effect_id"
   add_foreign_key "sites", "site_types", primary_key: "site_type_id"
   add_foreign_key "symptoms", "encounters", primary_key: "encounter_id"
   add_foreign_key "symptoms", "master_definitions", column: "concept_id", primary_key: "master_definition_id"

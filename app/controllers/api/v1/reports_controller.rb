@@ -11,6 +11,12 @@ class Api::V1::ReportsController < ApplicationController
  	render json: client_case 	
  end
 
+ def cbs_eid_cases
+ 	eid_cases = service.cbs_eid_cases
+ 	headers['X-Pagination'] = eid_cases[1]
+ 	render json: eid_cases[0]
+ end
+
  def art_initiated
  	initiated_clients = service.cbs_art_initiated(rds_db)
  	render json: initiated_clients

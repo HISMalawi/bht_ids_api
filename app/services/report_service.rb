@@ -72,6 +72,37 @@ EOF
 		return case_hash, headers
 	end
 
+	def cbs_eid_cases
+		case_hash = {}
+
+		data = PersonHasTypes.joins(:hiv_staging_info, :people, :de_identified_identifier).select('identifier 
+			surveillance_id, person_has_types.person_id,gender, birthdate,date_enrolled,start_date,who_stage, 
+			age_at_initiation, hiv_test_date, hiv_test_facility').where("person_type_id = 1  AND age_at_initiation < 2 AND date_enrolled 
+			BETWEEN '#{@start_date}' AND '#{@end_date}'").paginate(page: @page, per_page: @per_page) 
+
+		headers = {
+				current_page: 	data.current_page,
+				per_page:     	data.per_page,
+				total_entries:  data.total_entries
+		}
+
+		data.each do |r|
+			case_hash[r["person_id"]] = {
+					surveillance:  r["surveillance_id"],
+					gender:        (r["gender"] == 0 ? 'M' : 'F'),
+					birthdate:     r["birthdate"],
+					date_enrolled: r["date_enrolled"],
+					hiv_test_date: r["hiv_test_date"],
+					hiv_test_facility: r["hiv_test_facility"],
+					initiation_date:    r["start_date"],										
+					current_regimen: (art_regimen r['person_id'])
+			}
+
+		end	
+
+		return case_hash, headers		
+	end
+
 	def cbs_client_case(person_id)
 		case_hash = {}
 

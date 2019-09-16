@@ -13,6 +13,7 @@ Rails.application.routes.draw do
 
       post '/users/create',        to: '/api/v1/users#create'
       get '/reports/case_listing', to: '/api/v1/reports#cbs_case_listing'
+      get '/reports/cbs_eid_cases', to: '/api/v1/reports#cbs_eid_cases'
       get '/reports/client_case_listing', to: '/api/v1/reports#cbs_client_case'
       get '/reports/art_initiated',   to: '/api/v1/reports#art_initiated'
       get '/locations/district_code', to: '/api/v1/locations#district_code'

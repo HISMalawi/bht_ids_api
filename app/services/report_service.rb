@@ -87,6 +87,7 @@ EOF
 		}
 
 		data.each do |r|
+			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
 					gender:        (r["gender"] == 0 ? 'M' : 'F'),
@@ -94,8 +95,10 @@ EOF
 					date_enrolled: r["date_enrolled"],
 					hiv_test_date: r["hiv_test_date"],
 					hiv_test_facility: r["hiv_test_facility"],
-					initiation_date:    r["start_date"],										
-					current_regimen: (art_regimen r['person_id'])
+					initiation_date:    r["start_date"],
+					age_at_initiation:    r["age_at_initiation"],										
+					current_regimen: (art_regimen r['person_id']),
+					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility
 			}
 
 		end	

@@ -95,7 +95,8 @@ EOF
 					hiv_test_date: r["hiv_test_date"],
 					hiv_test_facility: r["hiv_test_facility"],
 					initiation_date:    r["start_date"],										
-					current_regimen: (art_regimen r['person_id'])
+					current_regimen: (art_regimen r['person_id']),
+					age_at_initiation: r["age_at_initiation"]
 			}
 
 		end	

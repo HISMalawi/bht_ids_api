@@ -11,6 +11,12 @@ class Api::V1::ReportsController < ApplicationController
  	render json: client_case 	
  end
 
+ def cbs_eid_cases
+ 	eid_cases = service.cbs_eid_cases
+ 	headers['X-Pagination'] = eid_cases[1]
+ 	render json: eid_cases[0]
+ end
+
  def art_initiated
  	initiated_clients = service.cbs_art_initiated(rds_db)
  	render json: initiated_clients
@@ -24,7 +30,7 @@ class Api::V1::ReportsController < ApplicationController
     else
       ReportService.new(start_date: params[:start_date].to_date, 
         end_date: params[:end_date].to_date, district_id: params[:district_id], site_id: params[:site_id], 
-        person_id: params[:person_id],score: params[score], page: params[:page], per_page: params[:per_page])
+        person_id: params[:person_id],score: params[:score], page: params[:page], per_page: params[:per_page])
     end
 
  end

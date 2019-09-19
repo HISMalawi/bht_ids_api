@@ -11,31 +11,6 @@ class ReportService
 		@per_page    = per_page
 	end
 
-	def cbs_art_initiated(rds_db)
-		hts_client_ids = hts_clients
-		hts_client_ids = [0] if hts_client_ids.blank?
-		data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT distinct e.person_id, 
-		TIMESTAMPDIFF(year,DATE(p.birthdate),DATE('#{@end_date}')) age, p.gender,
-        hsi.date_enrolled 
-		FROM encounters e
-        JOIN people	p
-        ON e.person_id = p.person_id
-        JOIN hiv_staging_infos hsi 
-        ON e.person_id = hsi.person_id
-		WHERE e.program_id = 1 AND e.person_id IN (#{hts_client_ids.join(',')})
-        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
-EOF
-
-		art_vs_hts = {}
-
-		art_vs_hts['art_init'] = data
-		art_vs_hts['hts_postive'] = hts_postive(rds_db)
-
-		return art_vs_hts
-
-	end
-
 	def cbs_case_listing
 		case_hash = {}
 
@@ -229,9 +204,9 @@ EOF
 	end
 
 	def identify_potential_dupilcates(person_id)
-		#select all the potential duplicates that are matching 100%
-		potential_dup_a = PotentialDuplicate.where(person_id_a: person_id, score: @score) 
-		potential_dup_b =  PotentialDuplicate.where(person_id_b: person_id, score: @score)
+		#select all the potential duplicates that are matching by score
+		potential_dup_a = PotentialDuplicate.where('person_id_a = ? AND score >= ?', person_id, @score.to_i) 
+		potential_dup_b =  PotentialDuplicate.where('person_id_b = ? AND score >= ?', person_id, @score.to_i)
 
 		potential_duplicate = []
 
@@ -311,22 +286,6 @@ EOF
                                                             AND md.app_date_created = '#{current_regimen_date.first.date}';")
 
 		return current_regimen_dispensed.first.regimen || "Unknown"
-	end
-
-	def hts_postive(rds_db)
-		data = ActiveRecord::Base.connection.select_all <<~SQL
-    SELECT distinct e.person_id, (year(now() - year(p.birthdate))) age, p.gender,
-        hsi.date_enrolled 
-        FROM encounters e
-        JOIN people p
-        ON e.person_id = p.person_id
-        JOIN hiv_staging_infos hsi 
-        ON e.person_id = hsi.person_id
-        WHERE e.program_id = 18 AND e.person_id IN (select distinct person_id from #{rds_db}.obs where value_coded = 8497)
-        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
-		SQL
-
-		return data
 	end
 end
 

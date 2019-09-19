@@ -8,6 +8,8 @@ gem 'rails', '~> 5.2.3'
 
 gem 'will_paginate'
 
+gem 'parallel'
+
 gem 'jwt'
 # Use mysql as the database for Active Record
 gem 'mysql2', '>= 0.4.4', '< 0.6.0'

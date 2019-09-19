@@ -234,19 +234,24 @@ EOF
 		potential_dup_b =  PotentialDuplicate.where(person_id_b: person_id, score: @score)
 
 		potential_duplicate = []
-		
+
 		(potential_dup_a || []).each { |a| potential_duplicate << a['person_id_b'] }
 		(potential_dup_b || []).each { |b| potential_duplicate << b['person_id_a'] }
 
 		potential_duplicate << person_id
 
-		potential_duplicate = potential_duplicate.uniq.join(',')
+		potential_duplicate_hash = {}
 
-		return potential_duplicate
+		potential_duplicate_hash['duplicates'] = potential_duplicate.uniq
+        
+        #We subtract one record because the array includes the subject person
+		potential_duplicate_hash['total_duplicates'] = potential_duplicate.uniq.count.to_i - 1
+
+		return potential_duplicate_hash
 	end
 
 	def facility_movement(person_id, score)
-	  potential_duplicate = identify_potential_dupilcates(person_id)
+	  potential_duplicate = identify_potential_dupilcates(person_id)['duplicates'].join(',')
       encounters = Encounter.find_by_sql("SELECT md.definition program, max(visit_date) latest_visit_date, s.site_name  
                                            from encounters en
                                            join master_definitions md 

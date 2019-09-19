@@ -50,7 +50,7 @@ class ArtInitiationReportService < ReportService
 	end
 
   def group_by_age_and_sex(people)
-
+      people = [0] if people.empty?
 	  group_age_and_gender = ActiveRecord::Base.connection.select_all <<~SQL	
 	    SELECT
 		 CASE 

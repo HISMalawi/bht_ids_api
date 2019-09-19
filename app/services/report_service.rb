@@ -109,19 +109,19 @@ EOF
 	def cbs_client_case(person_id)
 		case_hash = {}
 
-		data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT DISTINCT  dii.identifier surveillance_id,pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
-		hsi.hiv_test_date, hsi.hiv_test_facility
-		FROM person_has_types pht
-        INNER JOIN hiv_staging_infos hsi ON pht.person_id = hsi.person_id
-		INNER JOIN people p ON pht.person_id = p.person_id
-		INNER JOIN de_identified_identifiers dii ON pht.person_id = dii.person_id
-		WHERE person_type_id = 1
-		AND pht.person_id = #{person_id}
-        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}'
-        ;  
+		data = ActiveRecord::Base.connection.select_all <<~SQL
+			SELECT DISTINCT  dii.identifier surveillance_id,pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
+			hsi.hiv_test_date, hsi.hiv_test_facility
+			FROM person_has_types pht
+	        INNER JOIN hiv_staging_infos hsi ON pht.person_id = hsi.person_id
+			INNER JOIN people p ON pht.person_id = p.person_id
+			INNER JOIN de_identified_identifiers dii ON pht.person_id = dii.person_id
+			WHERE person_type_id = 1
+			AND pht.person_id = #{person_id}
+	        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';  
 
-EOF
+	    SQL
+
 		data.each do |r|
 			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
@@ -228,26 +228,33 @@ EOF
 		
 	end
 
-	def facility_movement(person_id,score)		
+	def identify_potential_dupilcates(person_id)
 		#select all the potential duplicates that are matching 100%
-		potential_dup_a = PotentialDuplicate.find_by(person_id_a: person_id, score: score) 
-		potential_dup_b =  PotentialDuplicate.find_by(person_id_b: person_id, score: score)
+		potential_dup_a = PotentialDuplicate.where(person_id_a: person_id, score: @score) 
+		potential_dup_b =  PotentialDuplicate.where(person_id_b: person_id, score: @score)
 
 		potential_duplicate = []
+		
+		(potential_dup_a || []).each { |a| potential_duplicate << a['person_id_b'] }
+		(potential_dup_b || []).each { |b| potential_duplicate << b['person_id_a'] }
 
-		(potential_dup_a || []).each{|a| potential_duplicate << a["person_id_b"]}
-		(potential_dup_b || []).each{|b| potential_duplicate << b["person_id_a"]}
 		potential_duplicate << person_id
 
-		encounters = Encounter.find_by_sql("SELECT md.definition program, max(visit_date) latest_visit_date, s.site_name  
+		potential_duplicate = potential_duplicate.uniq.join(',')
+
+		return potential_duplicate
+	end
+
+	def facility_movement(person_id, score)
+	  potential_duplicate = identify_potential_dupilcates(person_id)
+      encounters = Encounter.find_by_sql("SELECT md.definition program, max(visit_date) latest_visit_date, s.site_name  
                                            from encounters en
                                            join master_definitions md 
                                            on en.program_id = md.master_definition_id
                                            join sites s on mid(encounter_id, -5) = s.site_id
-                                           where person_id in (4220100168)
+                                           where person_id in (#{potential_duplicate})
                                            group by program_id,mid(encounter_id, -5) order by visit_date ")
-		return encounters	
-
+	  return encounters
 	end
 
 	def life_status(person_id)
@@ -271,20 +278,6 @@ EOF
 		end	
 	end
 
-	def hts_clients
-		data = ActiveRecord::Base.connection.select_all <<EOF
-        SELECT pht.person_id
-		FROM person_has_types pht		
-		INNER JOIN encounters en ON pht.person_id = en.person_id		
-		AND en.program_id = 18;
-EOF
-
-		patient_ids = []
-		data.each do |d|
-			patient_ids << d["person_id"].to_i
-		end
-		return patient_ids
-	end
 
 	def art_regimen(person_id)
 		current_regimen_date = MedicationDispensation.find_by_sql("SELECT max(md.app_date_created) date                                                  FROM medication_dispensations md

@@ -1,18 +1,17 @@
 # frozen_string_literal: true
 
 class ArtInitiationReportService < ReportService
-  def cbs_art_initiated(rds_db)
-    hts_client_ids = hts_clients
+  def cbs_art_initiated
+    hts_postive_ids = hts_postive
 	hts_client_ids = [0] if hts_client_ids.blank?
 	
-	site_name = Site.find_by_site_id(@site.to_i)['site_name']
+	site_name = Site.find_by_site_id(@site.to_i)['site_name']	
 
 	rds_site_id = ActiveRecord::Base.connection.select_one <<~SQL
 	  SELECT location_id FROM #{rds_db}.location
 	SQL
 
-	hts_confimatory_positive = hts_postive(rds_db, site_id)
-	
+	hts_confimatory_positive = hts_postive(rds_db, site_id)	
 
 		hts_initated = ActiveRecord::Base.connection.select_all <<~SQL
 		  SELECT hsi.person_id, hsi.age_at_initiation num, p.birthdate
@@ -38,24 +37,21 @@ class ArtInitiationReportService < ReportService
 		return art_vs_hts
 	end
 
-	def hts_postive(rds_db, site_id)
-		data = ActiveRecord::Base.connection.select_all <<~SQL
-	      SELECT person_id, obs_datetime, p.gender, p.birthdate FROM
-	      #{rds_db}.obs ob 
-	      JOIN person p on ob.person_id = p.person_id
-	      WHERE value_coded = 8497
-	      AND obs_datetime BETWEEN '#{@start_date}' AND '#{@end_date}'
-	      AND mid(person_id,-5,5) = #{site_id.to_i};
-		SQL
+	def hts_postive
+		#Note need to change value coded to the correct one for positives after fixing meta-data
+		data = Encounter.joins(
+			:hts_results_givens).where(
+			program_id: 18,
+			hts_results_givens: {value_coded: 10249}).select('encounters.person_id')
+
      return data
 	end
 
 	def hts_clients
 		data = ActiveRecord::Base.connection.select_all <<~SQL
-          SELECT pht.person_id
-		  FROM person_has_types pht		
-		  INNER JOIN encounters en ON pht.person_id = en.person_id		
-		  AND en.program_id = 18;
+          SELECT person_id
+		  FROM encounters en		
+		  WHERE en.program_id = 18;
     	SQL
 
 		patient_ids = []

@@ -18,7 +18,7 @@ class Api::V1::ReportsController < ApplicationController
  end
 
  def art_initiated
- 	initiated_clients = service.cbs_art_initiated(rds_db)
+ 	initiated_clients = art_service.cbs_art_initiated
  	render json: initiated_clients
  end
 
@@ -35,4 +35,9 @@ class Api::V1::ReportsController < ApplicationController
 
  end
 
+ def art_service
+   ArtInitiationReportService.new(start_date: params[:start_date].to_date, 
+   end_date: params[:end_date].to_date, district_id: params[:district_id], site_id: params[:site_id], 
+   person_id: params[:person_id],score: params[:score], page: params[:page], per_page: params[:per_page])
+ end
 end

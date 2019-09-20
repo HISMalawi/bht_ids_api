@@ -11,31 +11,6 @@ class ReportService
 		@per_page    = per_page
 	end
 
-	def cbs_art_initiated(rds_db)
-		hts_client_ids = hts_clients
-		hts_client_ids = [0] if hts_client_ids.blank?
-		data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT distinct e.person_id, 
-		TIMESTAMPDIFF(year,DATE(p.birthdate),DATE('#{@end_date}')) age, p.gender,
-        hsi.date_enrolled 
-		FROM encounters e
-        JOIN people	p
-        ON e.person_id = p.person_id
-        JOIN hiv_staging_infos hsi 
-        ON e.person_id = hsi.person_id
-		WHERE e.program_id = 1 AND e.person_id IN (#{hts_client_ids.join(',')})
-        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
-EOF
-
-		art_vs_hts = {}
-
-		art_vs_hts['art_init'] = data
-		art_vs_hts['hts_postive'] = hts_postive(rds_db)
-
-		return art_vs_hts
-
-	end
-
 	def cbs_case_listing
 		case_hash = {}
 
@@ -55,15 +30,15 @@ EOF
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
 					gender:        (r["gender"] == 0 ? 'M' : 'F'),
-					birthdate:     r["birthdate"],
-					date_enrolled: r["date_enrolled"],
+					birthdate:     r["birthdate"].strftime("%b/%Y"),
+					date_enrolled: r["date_enrolled"].strftime("%d/%b/%Y"),
 					hiv_test_date: r["hiv_test_date"],
 					hiv_test_facility: r["hiv_test_facility"],
-					initiation_date:    r["start_date"],
+					initiation_date:    r["start_date"].strftime("%d/%b/%Y"),
 					who_stage:     (definition_name r["who_stage"]),
 					age_at_initiation: r["age_at_initiation"],
 					latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
-					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date,
+					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%d/%b/%Y"),
 					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
 					current_regimen: (art_regimen r['person_id'])
 			}
@@ -87,16 +62,19 @@ EOF
 		}
 
 		data.each do |r|
+			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
 					gender:        (r["gender"] == 0 ? 'M' : 'F'),
-					birthdate:     r["birthdate"],
-					date_enrolled: r["date_enrolled"],
-					hiv_test_date: r["hiv_test_date"],
+					birthdate:     r["birthdate"].strftime("%b/%Y"),
+					date_enrolled: r["date_enrolled"].strftime("%d/%b/%Y"),
+					hiv_test_date: r["hiv_test_date"].strftime("%d/%b/%Y"),
 					hiv_test_facility: r["hiv_test_facility"],
-					initiation_date:    r["start_date"],										
+					initiation_date:    r["start_date"].strftime("%d/%b/%Y"),
+					age_at_initiation:    r["age_at_initiation"],										
 					current_regimen: (art_regimen r['person_id']),
-					age_at_initiation: r["age_at_initiation"]
+					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility
+
 			}
 
 		end	
@@ -107,40 +85,40 @@ EOF
 	def cbs_client_case(person_id)
 		case_hash = {}
 
-		data = ActiveRecord::Base.connection.select_all <<EOF
-		SELECT DISTINCT  dii.identifier surveillance_id,pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
-		hsi.hiv_test_date, hsi.hiv_test_facility
-		FROM person_has_types pht
-        INNER JOIN hiv_staging_infos hsi ON pht.person_id = hsi.person_id
-		INNER JOIN people p ON pht.person_id = p.person_id
-		INNER JOIN de_identified_identifiers dii ON pht.person_id = dii.person_id
-		WHERE person_type_id = 1
-		AND pht.person_id = #{person_id}
-        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}'
-        ;  
+		data = ActiveRecord::Base.connection.select_all <<~SQL
+			SELECT DISTINCT  dii.identifier surveillance_id,pht.person_id,p.gender,p.birthdate,hsi.date_enrolled,hsi.start_date,hsi.who_stage, hsi.age_at_initiation,
+			hsi.hiv_test_date, hsi.hiv_test_facility
+			FROM person_has_types pht
+	        INNER JOIN hiv_staging_infos hsi ON pht.person_id = hsi.person_id
+			INNER JOIN people p ON pht.person_id = p.person_id
+			INNER JOIN de_identified_identifiers dii ON pht.person_id = dii.person_id
+			WHERE person_type_id = 1
+			AND pht.person_id = #{person_id}
+	        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';  
 
-EOF
+	    SQL
+
 		data.each do |r|
 			viral_result = viral_load r["person_id"]
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
 					gender:        (r["gender"] == "0" ? 'M' : 'F'),
-					birthdate:     r["birthdate"],
-					date_enrolled: r["date_enrolled"],
-					hiv_test_date: r["hiv_test_date"],
+					birthdate:     r["birthdate"].strftime("%b/%Y"),
+					date_enrolled: r["date_enrolled"].strftime("%d/%b/%Y"),
+					hiv_test_date: r["hiv_test_date"].strftime("%d/%b/%Y"),
 					hiv_test_facility: r["hiv_test_facility"],
-					initiation_date:    r["start_date"],
+					initiation_date:    r["start_date"].strftime("%d/%b/%Y"),
 					who_stage:     (definition_name r["who_stage"]),
 					age_at_initiation: r["age_at_initiation"],
 					first_viral_load_date: (min_viral_load_date r['person_id']),
 					latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
-					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%Y-%m-%d"),
+					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%d/%b/%Y"),
 					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
 					viral_load_follow_up_date: (follow_up_vl_test r['person_id']),
 					Vl_supressed_result:  (supressed_viral_load_history r['person_id']),
 					current_regimen: (art_regimen r['person_id']),
 					facility_tracking: (facility_movement r['person_id'],@score),
-					death_date:      (life_status r['person_id']),
+					death_date:      (life_status r['person_id']).strftime("%d/%b/%Y"),
 					death_cause:     (cause_of_death r['person_id']),
 					first_cd4_count_date:  (min_cd4_count_date r['person_id'])
 			}
@@ -181,7 +159,7 @@ EOF
 			                               WHERE en.person_id = #{person_id}
 			                               AND ltr.test_measure = 'Viral Load'")
 
-		return  viral_load_min_date.first.trd.strftime("%Y-%m-%d") rescue nil
+		return  viral_load_min_date.first.trd.strftime("%d-%m-%Y") rescue nil
 		
 	end
 
@@ -220,32 +198,44 @@ EOF
 			                               WHERE en.person_id = #{person_id}
 			                               AND ltr.test_measure = 'CD4 Count'")
 
- 		cd4_count_min_date = cd4_count_min_date.first.trd.strftime("%Y-%m-%d") unless  cd4_count_min_date.first.trd.blank?
+ 		cd4_count_min_date = cd4_count_min_date.first.trd.strftime("%d-%m-%Y") unless  cd4_count_min_date.first.trd.blank?
       
 		return  cd4_count_min_date
 		
 	end
 
-	def facility_movement(person_id,score)		
-		#select all the potential duplicates that are matching 100%
-		potential_dup_a = PotentialDuplicate.find_by(person_id_a: person_id, score: score) 
-		potential_dup_b =  PotentialDuplicate.find_by(person_id_b: person_id, score: score)
+	def identify_potential_dupilcates(person_id)
+		#select all the potential duplicates that are matching by score
+		potential_dup_a = PotentialDuplicate.where('person_id_a = ? AND score >= ?', person_id, @score.to_i) 
+		potential_dup_b =  PotentialDuplicate.where('person_id_b = ? AND score >= ?', person_id, @score.to_i)
 
 		potential_duplicate = []
 
-		(potential_dup_a || []).each{|a| potential_duplicate << a["person_id_b"]}
-		(potential_dup_b || []).each{|b| potential_duplicate << b["person_id_a"]}
+		(potential_dup_a || []).each { |a| potential_duplicate << a['person_id_b'] }
+		(potential_dup_b || []).each { |b| potential_duplicate << b['person_id_a'] }
+
 		potential_duplicate << person_id
 
-		encounters = Encounter.find_by_sql("SELECT md.definition program, max(visit_date) latest_visit_date, s.site_name  
+		potential_duplicate_hash = {}
+
+		potential_duplicate_hash['duplicates'] = potential_duplicate.uniq
+        
+        #We subtract one record because the array includes the subject person
+		potential_duplicate_hash['total_duplicates'] = potential_duplicate.uniq.count.to_i - 1
+
+		return potential_duplicate_hash
+	end
+
+	def facility_movement(person_id, score)
+	  potential_duplicate = identify_potential_dupilcates(person_id)['duplicates'].join(',')
+      encounters = Encounter.find_by_sql("SELECT md.definition program, max(visit_date) latest_visit_date, s.site_name  
                                            from encounters en
                                            join master_definitions md 
                                            on en.program_id = md.master_definition_id
                                            join sites s on mid(encounter_id, -5) = s.site_id
-                                           where person_id in (4220100168)
+                                           where person_id in (#{potential_duplicate})
                                            group by program_id,mid(encounter_id, -5) order by visit_date ")
-		return encounters	
-
+	  return encounters
 	end
 
 	def life_status(person_id)
@@ -269,20 +259,6 @@ EOF
 		end	
 	end
 
-	def hts_clients
-		data = ActiveRecord::Base.connection.select_all <<EOF
-        SELECT pht.person_id
-		FROM person_has_types pht		
-		INNER JOIN encounters en ON pht.person_id = en.person_id		
-		AND en.program_id = 18;
-EOF
-
-		patient_ids = []
-		data.each do |d|
-			patient_ids << d["person_id"].to_i
-		end
-		return patient_ids
-	end
 
 	def art_regimen(person_id)
 		current_regimen_date = MedicationDispensation.find_by_sql("SELECT max(md.app_date_created) date                                                  FROM medication_dispensations md
@@ -311,22 +287,6 @@ EOF
                                                             AND md.app_date_created = '#{current_regimen_date.first.date}';")
 
 		return current_regimen_dispensed.first.regimen || "Unknown"
-	end
-
-	def hts_postive(rds_db)
-		data = ActiveRecord::Base.connection.select_all <<~SQL
-    SELECT distinct e.person_id, (year(now() - year(p.birthdate))) age, p.gender,
-        hsi.date_enrolled 
-        FROM encounters e
-        JOIN people p
-        ON e.person_id = p.person_id
-        JOIN hiv_staging_infos hsi 
-        ON e.person_id = hsi.person_id
-        WHERE e.program_id = 18 AND e.person_id IN (select distinct person_id from #{rds_db}.obs where value_coded = 8497)
-        AND date_enrolled BETWEEN '#{@start_date}' AND '#{@end_date}';
-		SQL
-
-		return data
 	end
 end
 

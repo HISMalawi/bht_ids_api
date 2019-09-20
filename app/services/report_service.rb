@@ -40,7 +40,9 @@ class ReportService
 					latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
 					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%d/%b/%Y"),
 					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
-					current_regimen: (art_regimen r['person_id'])
+					current_regimen: (art_regimen r['person_id']),
+					latest_visit_date: (current_location r['person_id']).first.latest_visit_date.strftime("%d/%b/%Y"),
+					current_facility: (current_location r['person_id']).first.site_name	
 			}
 		end
 
@@ -161,6 +163,16 @@ class ReportService
 
 		return  viral_load_min_date.first.trd.strftime("%d-%m-%Y") rescue nil
 		
+	end
+
+	def current_location(person_id)
+		encounters = Encounter.find_by_sql("SELECT  max(visit_date) latest_visit_date, s.site_name  
+                                           from encounters en                                           
+                                           join sites s on mid(encounter_id, -5) = s.site_id
+                                           where en.person_id = #{person_id}
+                                           and en.program_id = 1
+                                            ")
+	  return encounters	
 	end
 
 	def supressed_viral_load_history(person_id)

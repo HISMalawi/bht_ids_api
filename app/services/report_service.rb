@@ -30,17 +30,19 @@ class ReportService
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
 					gender:        (r["gender"] == 0 ? 'M' : 'F'),
-					birthdate:     r["birthdate"],
-					date_enrolled: r["date_enrolled"],
+					birthdate:     r["birthdate"].strftime("%b/%Y"),
+					date_enrolled: r["date_enrolled"].strftime("%d/%b/%Y"),
 					hiv_test_date: r["hiv_test_date"],
 					hiv_test_facility: r["hiv_test_facility"],
-					initiation_date:    r["start_date"],
+					initiation_date:    r["start_date"].strftime("%d/%b/%Y"),
 					who_stage:     (definition_name r["who_stage"]),
 					age_at_initiation: r["age_at_initiation"],
 					latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
-					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date,
+					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%d/%b/%Y"),
 					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
-					current_regimen: (art_regimen r['person_id'])
+					current_regimen: (art_regimen r['person_id']),
+					latest_visit_date: (current_location r['person_id']).first.latest_visit_date.strftime("%d/%b/%Y"),
+					current_facility: (current_location r['person_id']).first.site_name	
 			}
 		end
 
@@ -66,14 +68,15 @@ class ReportService
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
 					gender:        (r["gender"] == 0 ? 'M' : 'F'),
-					birthdate:     r["birthdate"],
-					date_enrolled: r["date_enrolled"],
-					hiv_test_date: r["hiv_test_date"],
+					birthdate:     r["birthdate"].strftime("%b/%Y"),
+					date_enrolled: r["date_enrolled"].strftime("%d/%b/%Y"),
+					hiv_test_date: r["hiv_test_date"].strftime("%d/%b/%Y"),
 					hiv_test_facility: r["hiv_test_facility"],
-					initiation_date:    r["start_date"],
+					initiation_date:    r["start_date"].strftime("%d/%b/%Y"),
 					age_at_initiation:    r["age_at_initiation"],										
 					current_regimen: (art_regimen r['person_id']),
 					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility
+
 			}
 
 		end	
@@ -102,21 +105,23 @@ class ReportService
 			case_hash[r["person_id"]] = {
 					surveillance:  r["surveillance_id"],
 					gender:        (r["gender"] == "0" ? 'M' : 'F'),
-					birthdate:     r["birthdate"],
-					date_enrolled: r["date_enrolled"],
-					hiv_test_date: r["hiv_test_date"],
+					birthdate:     r["birthdate"].strftime("%b/%Y"),
+					date_enrolled: r["date_enrolled"].strftime("%d/%b/%Y"),
+					hiv_test_date: r["hiv_test_date"].strftime("%d/%b/%Y"),
 					hiv_test_facility: r["hiv_test_facility"],
-					initiation_date:    r["start_date"],
+					initiation_date:    r["start_date"].strftime("%d/%b/%Y"),
 					who_stage:     (definition_name r["who_stage"]),
 					age_at_initiation: r["age_at_initiation"],
 					first_viral_load_date: (min_viral_load_date r['person_id']),
 					latest_vl_result: viral_result.blank? ? 'N/A' : viral_result.first.result,
-					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%Y-%m-%d"),
+					latest_vl_date: viral_result.blank? ? 'N/A' : viral_result.first.test_result_date.strftime("%d/%b/%Y"),
 					latest_vl_facility: viral_result.blank? ? 'N/A' : viral_result.first.results_test_facility,
 					viral_load_follow_up_date: (follow_up_vl_test r['person_id']),
 					Vl_supressed_result:  (supressed_viral_load_history r['person_id']),
 					current_regimen: (art_regimen r['person_id']),
 					death_date:      (life_status r['person_id']),
+					facility_tracking: (facility_movement r['person_id'],@score),
+					death_date:      (life_status r['person_id']).strftime("%d/%b/%Y"),
 					death_cause:     (cause_of_death r['person_id']),
 					first_cd4_count_date:  (min_cd4_count_date r['person_id'])
 			}
@@ -169,8 +174,18 @@ class ReportService
 			                               WHERE en.person_id = #{person_id}
 			                               AND ltr.test_measure = 'Viral Load'")
 
-		return  viral_load_min_date.first.trd.strftime("%Y-%m-%d") rescue nil
+		return  viral_load_min_date.first.trd.strftime("%d-%m-%Y") rescue nil
 		
+	end
+
+	def current_location(person_id)
+		encounters = Encounter.find_by_sql("SELECT  max(visit_date) latest_visit_date, s.site_name  
+                                           from encounters en                                           
+                                           join sites s on mid(encounter_id, -5) = s.site_id
+                                           where en.person_id = #{person_id}
+                                           and en.program_id = 1
+                                            ")
+	  return encounters	
 	end
 
 	def supressed_viral_load_history(person_id)
@@ -208,7 +223,7 @@ class ReportService
 			                               WHERE en.person_id = #{person_id}
 			                               AND ltr.test_measure = 'CD4 Count'")
 
- 		cd4_count_min_date = cd4_count_min_date.first.trd.strftime("%Y-%m-%d") unless  cd4_count_min_date.first.trd.blank?
+ 		cd4_count_min_date = cd4_count_min_date.first.trd.strftime("%d-%m-%Y") unless  cd4_count_min_date.first.trd.blank?
       
 		return  cd4_count_min_date		
 	end

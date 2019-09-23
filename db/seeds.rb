@@ -23,8 +23,8 @@ connection = ActiveRecord::Base.connection
     end
   end
   puts "Loaded #{metadata_sql_file} metadata sql file successfully"
-  puts 'Username: test'
-  puts 'Password: test'
+  puts 'Username: Administrator'
+  puts 'Password: p@ssw0rd'
 end
 
 puts '================= SQL Metadata End ====================='

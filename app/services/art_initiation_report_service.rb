@@ -5,7 +5,7 @@ class ArtInitiationReportService < ReportService
     hts_postive_ids = hts_postive
 	hts_postive_ids = [0] if hts_postive_ids.blank?
 
-	hts_positive_initiated = positive_initiated(hts_postive_ids)
+	hts_positive_initiated = positive_initiated(hts_postive_ids.uniq)
 	
 	hts_positive_not_initiated = hts_postive_ids - hts_positive_initiated
 
@@ -27,25 +27,25 @@ class ArtInitiationReportService < ReportService
 
       data.each { |id| ids << id['person_id'] }
 
-     return ids
+     return ids.uniq
 	end
 
 	def positive_initiated(person_ids)
 	 initiated = []
-	 person_ids.each do |person_id|
-	   duplicates = identify_potential_dupilcates(person_id)['duplicates'].join(',')
+		 person_ids.each do |person_id|
+		   duplicates = identify_potential_dupilcates(person_id)['duplicates'].join(',')
 
-	   has_dispensation = ActiveRecord::Base.connection.select_all <<~SQL
-	     SELECT person_id
-		 FROM encounters en
-	     JOIN medication_prescriptions mp 
-	     ON en.encounter_id = mp.encounter_id
-	     JOIN medication_dispensations md 
-	     ON mp.medication_prescription_id = md.medication_prescription_id
-	     WHERE person_id IN (#{duplicates}) limit 1;
-	  SQL
-       initiated << person_id unless has_dispensation.blank?
-     end
+		   has_dispensation = ActiveRecord::Base.connection.select_all <<~SQL
+		     SELECT person_id
+			 FROM encounters en
+		     JOIN medication_prescriptions mp 
+		     ON en.encounter_id = mp.encounter_id
+		     JOIN medication_dispensations md 
+		     ON mp.medication_prescription_id = md.medication_prescription_id
+		     WHERE person_id IN (#{duplicates}) limit 1;
+		   SQL
+	       initiated << person_id unless has_dispensation.blank?
+	     end
        return initiated
 	end
 

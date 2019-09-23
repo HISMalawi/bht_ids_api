@@ -1,17 +1,17 @@
 class ReportService
+  def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil, 
+    score: 100, page: 1, per_page: 25)
+	@start_date  = start_date
+	@end_date    = end_date
+	@district    = district_id
+	@site        = site_id
+	@person_id   = person_id
+	@score       = score
+	@page 		 = page
+	@per_page    = per_page
+  end
 
-	def initialize(start_date:, end_date:, district_id:, site_id:, person_id: nil, score: 100, page: 1, per_page: 25)
-		@start_date  = start_date
-		@end_date    = end_date
-		@district    = district_id
-		@site        = site_id
-		@person_id   = person_id
-		@score       = score
-		@page 		 = page
-		@per_page    = per_page
-	end
-
-	def cbs_case_listing
+  def cbs_case_listing
 		case_hash = {}
 
 		data = PersonHasTypes.joins(:hiv_staging_info, :people, :de_identified_identifier).select('identifier 
@@ -81,7 +81,7 @@ class ReportService
 
 		end	
 
-		return case_hash, headers		
+		return case_hash, headers
 	end
 
 	def cbs_client_case(person_id)
@@ -119,6 +119,7 @@ class ReportService
 					viral_load_follow_up_date: (follow_up_vl_test r['person_id']),
 					Vl_supressed_result:  (supressed_viral_load_history r['person_id']),
 					current_regimen: (art_regimen r['person_id']),
+					death_date:      (life_status r['person_id']),
 					facility_tracking: (facility_movement r['person_id'],@score),
 					death_date:      (life_status r['person_id']).strftime("%d/%b/%Y"),
 					death_cause:     (cause_of_death r['person_id']),
@@ -126,6 +127,18 @@ class ReportService
 			}
 		end
 		return case_hash
+	end
+
+	def facility_movement(person_id, score)
+	  potential_duplicate = identify_potential_dupilcates(person_id)['duplicates'].join(',')
+      encounters = Encounter.find_by_sql("SELECT md.definition program, max(visit_date) latest_visit_date, s.site_name  
+                                           from encounters en
+                                           join master_definitions md 
+                                           on en.program_id = md.master_definition_id
+                                           join sites s on mid(encounter_id, -5) = s.site_id
+                                           where person_id in (#{potential_duplicate})
+                                           group by program_id,mid(encounter_id, -5) order by visit_date ")
+	  return encounters
 	end
 	
 
@@ -212,8 +225,7 @@ class ReportService
 
  		cd4_count_min_date = cd4_count_min_date.first.trd.strftime("%d-%m-%Y") unless  cd4_count_min_date.first.trd.blank?
       
-		return  cd4_count_min_date
-		
+		return  cd4_count_min_date		
 	end
 
 	def identify_potential_dupilcates(person_id)
@@ -238,17 +250,7 @@ class ReportService
 		return potential_duplicate_hash
 	end
 
-	def facility_movement(person_id, score)
-	  potential_duplicate = identify_potential_dupilcates(person_id)['duplicates'].join(',')
-      encounters = Encounter.find_by_sql("SELECT md.definition program, max(visit_date) latest_visit_date, s.site_name  
-                                           from encounters en
-                                           join master_definitions md 
-                                           on en.program_id = md.master_definition_id
-                                           join sites s on mid(encounter_id, -5) = s.site_id
-                                           where person_id in (#{potential_duplicate})
-                                           group by program_id,mid(encounter_id, -5) order by visit_date ")
-	  return encounters
-	end
+	
 
 	def life_status(person_id)
 		client_life_status = People.find_by_sql("SELECT death_date FROM people 
@@ -270,7 +272,6 @@ class ReportService
 			return death_cause.first.cause_of_death
 		end	
 	end
-
 
 	def art_regimen(person_id)
 		current_regimen_date = MedicationDispensation.find_by_sql("SELECT max(md.app_date_created) date                                                  FROM medication_dispensations md

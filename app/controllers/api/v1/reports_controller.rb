@@ -22,12 +22,19 @@ class Api::V1::ReportsController < ApplicationController
  	render json: initiated_clients
  end
 
+ def client_movement
+   movement = service.facility_movement(params['person_id'], params['score'])
+   render json: movement
+ end
+
  def service
  	if params[:person_id] == nil
       ReportService.new(start_date: params[:start_date].to_date, 
         end_date: params[:end_date].to_date, district_id: params[:district_id], site_id: params[:site_id],
         page: params[:page], per_page: params[:per_page])
     else
+        params[:start_date] = '1900-01-01' unless params.include?('start_date')
+        params[:end_date] = Date.today unless params.include?('end_date')
       ReportService.new(start_date: params[:start_date].to_date, 
         end_date: params[:end_date].to_date, district_id: params[:district_id], site_id: params[:site_id], 
         person_id: params[:person_id],score: params[:score], page: params[:page], per_page: params[:per_page])
@@ -38,6 +45,6 @@ class Api::V1::ReportsController < ApplicationController
  def art_service
    ArtInitiationReportService.new(start_date: params[:start_date].to_date, 
    end_date: params[:end_date].to_date, district_id: params[:district_id], site_id: params[:site_id], 
-   person_id: params[:person_id],score: params[:score], page: params[:page], per_page: params[:per_page])
+   person_id: params[:person_id],score: (params[:score] || 100))
  end
 end

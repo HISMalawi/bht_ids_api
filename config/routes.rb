@@ -16,6 +16,7 @@ Rails.application.routes.draw do
       get '/reports/cbs_eid_cases', to: '/api/v1/reports#cbs_eid_cases'
       get '/reports/client_case_listing', to: '/api/v1/reports#cbs_client_case'
       get '/reports/art_initiated',   to: '/api/v1/reports#art_initiated'
+      get '/reports/facility_movement', to: '/api/v1/reports#client_movement'
       get '/locations/district_code', to: '/api/v1/locations#district_code'
       get '/locations/site_code',     to: '/api/v1/locations#site_code'
     end

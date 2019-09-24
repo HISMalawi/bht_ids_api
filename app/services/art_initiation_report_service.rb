@@ -17,15 +17,20 @@ class ArtInitiationReportService < ReportService
 	return art_vs_hts
   end
 
-	def hts_postive
-		#Note need to change value coded to the correct one for positives after fixing meta-data
-	  data = Encounter.joins(
-			:hts_results_givens).where(
-			program_id: 18,
-			hts_results_givens: {value_coded: 10249}).select('encounters.person_id')
+  def hts_postive
+    # Note need to change value coded to the correct one for positives after
+    # fixing meta-data
+    site_code = Site.find(@site.to_i)['site_code']
+
+    data = Encounter.joins(
+	        :hts_results_givens
+			).where("
+			program_id = 18  
+			AND hts_results_givens.value_coded = 10249
+			AND mid(htsrg_id,-5,5) = #{site_code}").select('encounters.person_id')
       ids = []
 
-      data.each { |id| ids << id['person_id'] }
+      data.each { |id| ids << id['person_id'] }         
 
      return ids.uniq
 	end

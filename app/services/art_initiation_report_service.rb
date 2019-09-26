@@ -8,13 +8,36 @@ class ArtInitiationReportService < ReportService
 	hts_positive_initiated = positive_initiated(hts_postive_ids.uniq)
 	
 	hts_positive_not_initiated = hts_postive_ids - hts_positive_initiated
+    
+    initiated = group_by_age_and_sex(hts_positive_initiated)
+	non_initiated = group_by_age_and_sex(hts_positive_not_initiated)
 
-	art_vs_hts = {}
+	art_vs_hts = [
+		{ 'age_range' => '<1', 'w_init' => 0, 'wtout_init' => 0 },
+		{ 'age_range' => '1-9', 'w_init' => 0, 'wtout_init' => 0 },
+		{ 'age_range' => '10-14M', 'w_init' => 0, 'wtout_init' => 0 },
+		{ 'age_range' => '10-14F', 'w_init' => 0, 'wtout_init' => 0 },
+		{ 'age_range' => '15-19M', 'w_init' => 0, 'wtout_init' => 0},
+		{ 'age_range' => '15-19F', 'w_init' => 0, 'wtout_init' => 0 },
+		{ 'age_range' => '20-24M', 'w_init' => 0, 'wtout_init' => 0 },
+		{ 'age_range' => '25-49F', 'w_init' => 0, 'wtout_init' => 0 },
+		{ 'age_range' => '50+M', 'w_init' => 0, 'wtout_init' => 0 },
+		{ 'age_range' => '50+F', 'w_init' => 0, 'wtout_init' => 0 }
+	]
+   
+   art_vs_hts.each do |record|
+   	 initiated.each do |key, value|
+   	     record['w_init'] = value.to_i if record['age_range'] == key
+   	 end 
+   end
 
-	art_vs_hts['initiated'] = group_by_age_and_sex(hts_positive_initiated)
-	art_vs_hts['uninitiated'] = group_by_age_and_sex(hts_positive_not_initiated)
+   art_vs_hts.each do |record|
+   	 non_initiated.each do |key, value|
+   	     record['wtout_init'] = value.to_i if record['age_range'] == key
+   	 end 
+   end
 
-	return art_vs_hts
+   return art_vs_hts
   end
 
   def hts_postive

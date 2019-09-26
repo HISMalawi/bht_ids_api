@@ -16,6 +16,8 @@ class Api::V1::UsersController < ApplicationController
 
 	# POST 
 	def create
+		authorize @user
+
 		@user = User.new(user_params)
 
 		if @user.save
@@ -27,6 +29,8 @@ class Api::V1::UsersController < ApplicationController
 
 	# PUT /user/1
 	def update
+		authorize @user
+		
 		if @user.update(user_params)
 			render json: @user
 		else
@@ -37,7 +41,8 @@ class Api::V1::UsersController < ApplicationController
 
     # DELETE /user/1
 	def destroy
-		
+		authorize @user
+
 		if @user.destroy
 		   render json: {status: "Successfully deleted user"}, status: :success
 	    else

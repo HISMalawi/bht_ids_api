@@ -129,7 +129,8 @@ class ReportService
 		return case_hash
 	end
 
-	def facility_movement(person_id, score)
+	def facility_movement(person_id)
+	  surveillance_id = DeIdentifiedIdentifier.find_by_person_id(person_id.to_i)['identifier']
 	  potential_duplicate = identify_potential_dupilcates(person_id)['duplicates'].join(',')
       encounters = Encounter.find_by_sql("SELECT md.definition program, max(visit_date) latest_visit_date, s.site_name  
                                            from encounters en
@@ -137,8 +138,14 @@ class ReportService
                                            on en.program_id = md.master_definition_id
                                            join sites s on mid(encounter_id, -5) = s.site_id
                                            where person_id in (#{potential_duplicate})
-                                           group by program_id,mid(encounter_id, -5) order by visit_date ")
-	  return encounters
+                                           group by program_id,mid(encounter_id, -5) order by max(visit_date) desc ")
+      
+      result = {}
+      result['surveillance_id'] = surveillance_id
+      
+      result['movement'] = encounters
+
+	  return result
 	end
 	
 
@@ -228,10 +235,11 @@ class ReportService
 		return  cd4_count_min_date		
 	end
 
-	def identify_potential_dupilcates(person_id)
+	def identify_potential_dupilcates(person_id, score: 100)
+		score = (@score || score)
 		#select all the potential duplicates that are matching by score
-		potential_dup_a = PotentialDuplicate.where('person_id_a = ? AND score >= ?', person_id, @score.to_i) 
-		potential_dup_b =  PotentialDuplicate.where('person_id_b = ? AND score >= ?', person_id, @score.to_i)
+		potential_dup_a = PotentialDuplicate.where('person_id_a = ? AND score >= ?', person_id, score.to_i) 
+		potential_dup_b =  PotentialDuplicate.where('person_id_b = ? AND score >= ?', person_id, score.to_i)
 
 		potential_duplicate = []
 

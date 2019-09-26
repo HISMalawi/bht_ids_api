@@ -23,7 +23,7 @@ class Api::V1::ReportsController < ApplicationController
  end
 
  def client_movement
-   movement = service.facility_movement(params['person_id'], params['score'], params['site_id'])
+   movement = service.facility_movement(params['person_id'])
    render json: movement
  end
 

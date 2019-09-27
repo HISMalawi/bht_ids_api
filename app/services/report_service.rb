@@ -120,8 +120,8 @@ class ReportService
 					Vl_supressed_result:  (supressed_viral_load_history r['person_id']),
 					current_regimen: (art_regimen r['person_id']),
 					death_date:      (life_status r['person_id']),
-					facility_tracking: (facility_movement r['person_id'],@score),
-					death_date:      (life_status r['person_id']).strftime("%d/%b/%Y"),
+					facility_tracking: (facility_movement r['person_id']), # @score parameter (Removed to fix bug crushes)
+					death_date:      (life_status r['person_id']),
 					death_cause:     (cause_of_death r['person_id']),
 					first_cd4_count_date:  (min_cd4_count_date r['person_id'])
 			}
